@@ -1,0 +1,1081 @@
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { AppShell, SectionCard, StatusBadge, ProgressBar } from "../components/AppShell";
+import { useAppData, checkStageAdvancement } from "../hooks/useAppData";
+import { useAuth } from "../hooks/useAuth";
+import { STAGES } from "../lib/mockData";
+import { 
+  ClipboardList, ArrowLeft, Calendar, FileText, CheckCircle, 
+  Play, Circle, Save, ShieldAlert, Award, FileEdit, AlertTriangle, Plus, X
+} from "lucide-react";
+
+export const Route = createFileRoute("/orders/$orderId")({
+  head: () => ({
+    meta: [
+      { title: "Order Details · Forge & Fabric" },
+    ],
+  }),
+  component: Page,
+});
+
+function Page() {
+  const { orderId } = Route.useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const { 
+    orders, 
+    materials, 
+    cutting, 
+    sewing, 
+    wash, 
+    qc: qcRecords, 
+    cartons, 
+    equipment,
+    updateOrder,
+    advanceOrderStage,
+    addMaterial,
+    addCuttingRecord,
+    addSewingBundle,
+    addWashBatch,
+    addQCRecord,
+    addCarton
+  } = useAppData();
+
+  const [noteText, setNoteText] = useState("");
+  const [isSaved, setIsSaved] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Modal active state
+  const [activeModal, setActiveModal] = useState<"material" | "cutting" | "sewing" | "wash" | "qc" | "carton" | null>(null);
+
+  // Log Material receipt state
+  const [matType, setMatType] = useState<"Fabric" | "Trim" | "Accessory">("Fabric");
+  const [matDesc, setMatDesc] = useState("");
+  const [matQty, setMatQty] = useState(100);
+
+  // Log Cutting job state
+  const [panelsCut, setPanelsCut] = useState(500);
+  const [cutSize, setCutSize] = useState("M");
+  const [cutColor, setCutColor] = useState("Indigo Blue");
+  const [cutterUsed, setCutterUsed] = useState("");
+  const [cutStatus, setCutStatus] = useState<"In Progress" | "Completed">("In Progress");
+
+  // Log Sewing bundle state
+  const [sewLine, setSewLine] = useState<number>(1);
+  const [opsCount, setOpsCount] = useState(15);
+  const [sewQty, setSewQty] = useState(250);
+  const [sewQcResult, setSewQcResult] = useState<"Pass" | "Rework" | "Reject">("Pass");
+
+  // Log Wash batch state
+  const [washQty, setWashQty] = useState(500);
+  const [washStage, setWashStage] = useState<"Wash" | "Dry" | "Finish" | "Approved">("Wash");
+  const [washEquip, setWashEquip] = useState("");
+
+  // Log QC audit state
+  const [qcCheckpoint, setQcCheckpoint] = useState<
+    | "Material Check"
+    | "First Cut Approval"
+    | "Inline Sewing QC"
+    | "Wash-Finish Approval"
+    | "Final AQL-Packing Audit"
+  >("Inline Sewing QC");
+  const [qcInspected, setQcInspected] = useState(100);
+  const [qcPass, setQcPass] = useState(98);
+  const [qcReject, setQcReject] = useState(2);
+  const [qcResult, setQcResult] = useState<"Pass" | "Rework" | "Reject">("Pass");
+
+  // Log Carton state
+  const [cartonQty, setCartonQty] = useState(150);
+
+  // Retrieve matching order
+  const order = orders.find((o) => o.order_id === orderId);
+
+  // Load notes and dynamic equipment lists
+  useEffect(() => {
+    if (order) {
+      setNoteText(order.notes || "");
+    }
+  }, [order]);
+
+  // Set default equipment values
+  const activeCutters = equipment.filter(eq => eq.type === "Cutter" && eq.status === "Active");
+  const activeSewing = equipment.filter(eq => eq.type === "Sewing Line" && eq.status === "Active");
+  const activeWash = equipment.filter(eq => ["Washer", "Laser", "Laser/Ozone", "Spray", "Finishing"].includes(eq.type) && eq.status === "Active");
+
+  useEffect(() => {
+    if (activeCutters.length > 0 && !cutterUsed) setCutterUsed(activeCutters[0].name);
+    if (activeSewing.length > 0) {
+      const match = activeSewing[0].name.match(/\d+/);
+      if (match) setSewLine(parseInt(match[0], 10));
+    }
+    if (activeWash.length > 0 && !washEquip) setWashEquip(activeWash[0].name);
+  }, [equipment]);
+
+  if (!order) {
+    return (
+      <AppShell>
+        <div className="text-center py-12 space-y-4">
+          <ShieldAlert className="h-12 w-12 text-destructive mx-auto" />
+          <h2 className="text-lg font-bold">Order Not Found</h2>
+          <p className="text-sm text-muted-foreground">The requested order ID does not exist or you do not have permission to view it.</p>
+          <button 
+            onClick={() => navigate({ to: "/orders" })}
+            className="text-xs font-semibold text-secondary hover:underline flex items-center gap-1 mx-auto"
+          >
+            <ArrowLeft className="h-4.5 w-4.5" /> Back to Orders
+          </button>
+        </div>
+      </AppShell>
+    );
+  }
+
+  // Filter items relating to this order
+  const orderMaterials = materials.filter((m) => m.order_id === orderId);
+  const orderCutting = cutting.filter((c) => c.order_id === orderId);
+  const orderSewing = sewing.filter((s) => s.order_id === orderId);
+  const orderWash = wash.filter((w) => w.order_id === orderId);
+  const orderQc = qcRecords.filter((q) => q.order_id === orderId);
+  const orderCartons = cartons.filter((c) => c.order_id === orderId);
+
+  // Role permissions
+  const isCustomer = user?.role === "customer";
+  const canEditNotes = user && ["admin", "merchandiser", "production"].includes(user.role);
+
+  // QC Checkpoint Calculations (Pass, Rework, Reject aggregates)
+  const qcStats = orderQc.reduce(
+    (acc, cur) => {
+      acc.inspected += cur.inspected_qty;
+      acc.pass += cur.pass_qty;
+      acc.reject += cur.reject_qty;
+      if (cur.result === "Rework") acc.rework += (cur.inspected_qty - cur.pass_qty - cur.reject_qty);
+      return acc;
+    },
+    { inspected: 0, pass: 0, reject: 0, rework: 0 }
+  );
+
+  const handleSaveNotes = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!canEditNotes) return;
+    updateOrder(orderId, { notes: noteText });
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2500);
+  };
+
+  const handleAdvance = (toStage: number) => {
+    setValidationError(null);
+    setSuccessMsg(null);
+
+    const check = checkStageAdvancement(toStage, order.order_id, {
+      materials,
+      cutting,
+      sewing,
+      qc: qcRecords,
+      wash,
+      cartons,
+    });
+
+    if (!check.allowed) {
+      setValidationError(check.message || "Stage advancement validation failed.");
+    } else {
+      advanceOrderStage(order.order_id, toStage);
+      setSuccessMsg(`Stage advanced to Stage ${toStage} successfully!`);
+      setTimeout(() => setSuccessMsg(null), 5000);
+    }
+  };
+
+  // Timeline Progress percentage
+  const totalStages = 13;
+  const stageProgress = Math.round((order.current_stage / totalStages) * 100);
+
+  const nextStage = order.current_stage + 1;
+  const isFinalStage = order.current_stage >= 13;
+  const advanceCheck = !isFinalStage ? checkStageAdvancement(nextStage, order.order_id, {
+    materials,
+    cutting,
+    sewing,
+    qc: qcRecords,
+    wash,
+    cartons,
+  }) : { allowed: false, message: "Order is already at final stage." };
+
+  // Deriving the Activity Log (Reverse Chronological)
+  const materialsLog = orderMaterials.map((m) => ({
+    id: m.material_id,
+    type: "Material",
+    stageName: "Raw Material Sourcing",
+    title: `Material Receipt Logged`,
+    detail: `${m.type} - ${m.description} (${m.qty_received.toLocaleString()} units) received. Inspection: ${m.inspection_status}`,
+    date: m.received_date,
+  }));
+
+  const cuttingLog = orderCutting.map((c) => ({
+    id: c.cut_id,
+    type: "Cutting",
+    stageName: "Cutting Stage",
+    title: `Cutting Job Logs`,
+    detail: `${c.panels_cut.toLocaleString()} panels cut (size ${c.size}, color ${c.color}) on ${c.cutter_used}. Status: ${c.status}. Approval: ${c.first_cut_approval_status}`,
+    date: order.created_date, // fallback
+  }));
+
+  const sewingLog = orderSewing.map((s) => ({
+    id: s.bundle_id,
+    type: "Sewing",
+    stageName: "Sewing WIP",
+    title: `Sewing Bundle Fed`,
+    detail: `Line ${s.line_number} bundle (${s.qty.toLocaleString()} pcs, ${s.operator_count} operators). QC: ${s.inline_qc_result}. Status: ${s.status}`,
+    date: order.created_date, // fallback
+  }));
+
+  const washLog = orderWash.map((w) => ({
+    id: w.batch_id,
+    type: "Wash",
+    stageName: "Wash & Dry",
+    title: `Finishing Batch Logs`,
+    detail: `Batch ${w.batch_id} (${w.pcs_qty.toLocaleString()} pcs) at stage ${w.stage} on ${w.equipment_used}`,
+    date: order.created_date, // fallback
+  }));
+
+  const qcLog = orderQc.map((q) => ({
+    id: q.qc_id,
+    type: "QC",
+    stageName: "Quality Inspection",
+    title: `QC Checkpoint Audit`,
+    detail: `${q.stage_checkpoint} - Inspected: ${q.inspected_qty.toLocaleString()} pcs. Result: ${q.result} (Pass: ${q.pass_qty}, Reject: ${q.reject_qty})`,
+    date: q.inspected_date,
+  }));
+
+  const cartonLog = orderCartons.map((c) => ({
+    id: c.carton_id,
+    type: "Carton",
+    stageName: "Packing & Dispatch",
+    title: `Carton Packaged`,
+    detail: `Carton ${c.carton_id} (${c.packed_qty.toLocaleString()} pcs). Status: ${c.dispatch_status} ${c.pod_reference ? `(POD: ${c.pod_reference})` : ""}`,
+    date: c.ship_date || order.created_date,
+  }));
+
+  const activityLog = [
+    ...materialsLog,
+    ...cuttingLog,
+    ...sewingLog,
+    ...washLog,
+    ...qcLog,
+    ...cartonLog,
+  ].sort((a, b) => b.date.localeCompare(a.date));
+
+  // Form submits
+  const handleMaterialSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!matDesc || matQty <= 0) return;
+    addMaterial({
+      material_id: `MAT-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      type: matType,
+      description: matDesc,
+      qty_received: matQty,
+      inspection_status: "Pending",
+      received_date: new Date().toISOString().slice(0, 10),
+    });
+    setMatDesc("");
+    setMatQty(100);
+    setActiveModal(null);
+  };
+
+  const handleCuttingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (panelsCut <= 0 || !cutterUsed) return;
+    addCuttingRecord({
+      cut_id: `CUT-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      panels_cut: panelsCut,
+      size: cutSize,
+      color: cutColor,
+      cutter_used: cutterUsed,
+      status: cutStatus,
+      first_cut_approval_status: "Pending",
+    });
+    setPanelsCut(500);
+    setCutSize("M");
+    setCutColor("Indigo");
+    setActiveModal(null);
+  };
+
+  const handleSewingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (opsCount <= 0 || sewQty <= 0) return;
+    addSewingBundle({
+      bundle_id: `BDL-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      line_number: sewLine,
+      operator_count: opsCount,
+      qty: sewQty,
+      status: "Active",
+      inline_qc_result: sewQcResult,
+    });
+    setOpsCount(15);
+    setSewQty(250);
+    setSewQcResult("Pass");
+    setActiveModal(null);
+  };
+
+  const handleWashSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (washQty <= 0 || !washEquip) return;
+    addWashBatch({
+      batch_id: `WSH-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      pcs_qty: washQty,
+      stage: washStage,
+      equipment_used: washEquip,
+    });
+    setWashQty(500);
+    setWashStage("Wash");
+    setActiveModal(null);
+  };
+
+  const handleQcSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (qcInspected <= 0) return;
+    addQCRecord({
+      qc_id: `QA-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      stage_checkpoint: qcCheckpoint,
+      inspected_qty: qcInspected,
+      pass_qty: qcPass,
+      reject_qty: qcReject,
+      result: qcResult,
+      inspected_date: new Date().toISOString().slice(0, 10),
+    });
+    setQcInspected(100);
+    setQcPass(98);
+    setQcReject(2);
+    setQcResult("Pass");
+    setActiveModal(null);
+  };
+
+  const handleCartonSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (cartonQty <= 0) return;
+    addCarton({
+      carton_id: `CTN-${Date.now().toString().slice(-5)}`,
+      order_id: orderId,
+      packed_qty: cartonQty,
+      dispatch_status: "Ready",
+      pod_reference: "",
+      ship_date: "",
+    });
+    setCartonQty(150);
+    setActiveModal(null);
+  };
+
+  return (
+    <AppShell>
+      <div className="space-y-6">
+        {/* Back Button */}
+        <div className="flex justify-between items-center">
+          <button 
+            onClick={() => navigate({ to: "/orders" })}
+            className="text-xs font-semibold text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Back to Orders
+          </button>
+        </div>
+
+        {/* Order Header Card */}
+        <div className="bg-card border border-border rounded-xl p-5 md:p-6 shadow-sm">
+          <div className="flex flex-wrap justify-between items-start gap-4 border-b border-border/60 pb-4 mb-4">
+            <div>
+              <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Order Ref</div>
+              <h1 className="mt-1 text-2xl font-bold font-display">{order.order_id}</h1>
+            </div>
+            <div className="flex items-center gap-2">
+              <StatusBadge status={order.status} />
+              <span className="text-xs border px-2 py-0.5 rounded bg-muted/30 text-muted-foreground font-mono-data">
+                Stage {order.current_stage}/13
+              </span>
+              
+              {/* Header Advance Stage Button */}
+              {!isCustomer && !["merchandiser"].includes(user?.role || "") && !isFinalStage && (
+                <div className="relative group">
+                  <button
+                    disabled={!advanceCheck.allowed}
+                    onClick={() => handleAdvance(nextStage)}
+                    className={`text-xs font-semibold px-3 py-1 rounded-lg flex items-center gap-1 transition-all shadow-sm ${
+                      advanceCheck.allowed
+                        ? "bg-primary hover:bg-black text-white cursor-pointer"
+                        : "bg-muted text-muted-foreground cursor-not-allowed opacity-60"
+                    }`}
+                  >
+                    <Play className="h-3 w-3 fill-current" /> Advance to Stage {nextStage}
+                  </button>
+                  {!advanceCheck.allowed && advanceCheck.message && (
+                    <div className="absolute right-0 top-full mt-1.5 hidden group-hover:block bg-black/95 text-white text-[10px] p-2 rounded-lg w-56 z-50 shadow-lg pointer-events-none text-left">
+                      {advanceCheck.message}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Customer</div>
+              <div className="mt-1 font-semibold text-foreground">{order.customer_name}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">PO Number</div>
+              <div className="mt-1 font-semibold text-foreground">{order.PO_number}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Tech Pack</div>
+              <div className="mt-1 font-semibold text-foreground font-mono-data text-xs">{order.tech_pack_ref}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Size Breakdown</div>
+              <div className="mt-1 font-semibold text-foreground">{order.size_breakdown}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Target Qty</div>
+              <div className="mt-1 font-semibold text-foreground">{order.qty.toLocaleString()} pcs</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">Created Date</div>
+              <div className="mt-1 font-semibold text-foreground flex items-center gap-1">
+                <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                {order.created_date}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-border/60">
+            <div className="flex items-center justify-between text-xs text-muted-foreground mb-1.5">
+              <span>Overall Pipeline Progress</span>
+              <span className="font-semibold text-foreground">{stageProgress}%</span>
+            </div>
+            <ProgressBar value={stageProgress} colorClass="bg-navy" />
+          </div>
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Timeline View (Left 2 Columns) */}
+          <div className="lg:col-span-2 space-y-6">
+            <SectionCard title="13-Stage Production Timeline">
+              {validationError && (
+                <div className="mb-4 p-3 rounded-lg flex items-start gap-2.5 text-xs font-semibold bg-error-container text-on-error-container border border-error/25">
+                  <AlertTriangle className="h-4.5 w-4.5 shrink-0 text-error" />
+                  <span>{validationError}</span>
+                </div>
+              )}
+              {successMsg && (
+                <div className="mb-4 p-3 rounded-lg flex items-center gap-2.5 text-xs font-semibold bg-success/15 text-success border border-success/30">
+                  <CheckCircle className="h-4.5 w-4.5 shrink-0" />
+                  <span>{successMsg}</span>
+                </div>
+              )}
+              <div className="relative border-l border-border ml-4 pl-6 space-y-8 py-3">
+                {STAGES.map((stg) => {
+                  const isDone = stg.id < order.current_stage;
+                  const isCurrent = stg.id === order.current_stage;
+                  const isPending = stg.id > order.current_stage;
+
+                  return (
+                    <div key={stg.id} className="relative">
+                      {/* Timeline dot */}
+                      <span className="absolute -left-10 top-0.5 grid place-items-center">
+                        {isDone ? (
+                          <span className="h-7 w-7 rounded-full bg-success text-success-foreground grid place-items-center border border-success">
+                            <CheckCircle className="h-4 w-4" />
+                          </span>
+                        ) : isCurrent ? (
+                          <span className="h-7 w-7 rounded-full bg-gold text-gold-foreground grid place-items-center border border-gold animate-pulse">
+                            <Play className="h-3 w-3 fill-current" />
+                          </span>
+                        ) : (
+                          <span className="h-7 w-7 rounded-full bg-card text-muted-foreground grid place-items-center border border-border">
+                            <Circle className="h-3.5 w-3.5" />
+                          </span>
+                        )}
+                      </span>
+
+                      {/* Content block */}
+                      <div className="space-y-1">
+                        <div className="flex flex-wrap items-center justify-between gap-2 w-full">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs uppercase tracking-wider font-extrabold text-muted-foreground">
+                              Stage {stg.id}
+                            </span>
+                            <h4 className="text-sm font-semibold text-foreground font-display">
+                              {stg.name}
+                            </h4>
+                            {isCurrent && (
+                              <span className="text-[9px] font-bold uppercase tracking-wider bg-gold/10 text-warning-foreground border border-gold/30 px-1 rounded">
+                                Current Stage
+                              </span>
+                            )}
+                          </div>
+                          {isCurrent && order.current_stage < 13 && !isCustomer && (
+                            <button
+                              onClick={() => handleAdvance(order.current_stage + 1)}
+                              className="text-[10px] uppercase font-bold tracking-wider bg-primary hover:bg-black text-white px-2.5 py-1 rounded transition-colors flex items-center gap-1 shadow-sm"
+                            >
+                              <Play className="h-2.5 w-2.5 fill-current" /> Advance Stage
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Stage Description for Customers */}
+                        {isCustomer ? (
+                          <div className="text-xs text-muted-foreground pt-1">
+                            <span className="font-semibold block text-primary/70">Stage Summary:</span>
+                            {stg.input} &rarr; {stg.output}
+                          </div>
+                        ) : (
+                          /* Detailed Stage Data for Factory Staff */
+                          <div className="text-xs text-muted-foreground space-y-1 bg-muted/20 border border-border/40 rounded-lg p-2.5 mt-2">
+                            <div className="grid grid-cols-2 gap-2 mb-2">
+                              <div>
+                                <span className="font-semibold text-foreground/80 block">Inputs Required:</span>
+                                {stg.input}
+                              </div>
+                              <div>
+                                <span className="font-semibold text-foreground/80 block">Outputs Expected:</span>
+                                {stg.output}
+                              </div>
+                            </div>
+
+                            {/* Dynamic records hook up */}
+                            {stg.id === 1 && (
+                              <div className="border-t border-border/40 pt-1.5 text-[11px] font-mono-data text-primary">
+                                &bull; Specification verified on PO {order.PO_number} (Ref: {order.tech_pack_ref})
+                              </div>
+                            )}
+
+                            {(stg.id === 2 || stg.id === 3) && orderMaterials.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px]">
+                                <span className="font-semibold text-foreground/80">Inbound Material Receipts:</span>
+                                {orderMaterials
+                                  .filter(m => (stg.id === 2 && m.type === "Fabric") || (stg.id === 3 && m.type !== "Fabric"))
+                                  .map(m => (
+                                    <div key={m.material_id} className="flex justify-between items-center text-primary font-mono-data">
+                                      <span>&bull; {m.description} ({m.qty_received.toLocaleString()} units)</span>
+                                      <span className="text-[10px] font-semibold uppercase">{m.inspection_status}</span>
+                                    </div>
+                                  ))}
+                              </div>
+                            )}
+
+                            {stg.id === 5 && orderCutting.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px] font-mono-data text-primary">
+                                <span className="font-semibold text-foreground/80 block">Cutting Conversion Logs:</span>
+                                {orderCutting.map(c => (
+                                  <div key={c.cut_id}>
+                                    &bull; {c.panels_cut.toLocaleString()} panels cut (Cutter: {c.cutter_used}, approval: {c.first_cut_approval_status})
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {(stg.id === 6 || stg.id === 7 || stg.id === 8) && orderSewing.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px] font-mono-data text-primary">
+                                <span className="font-semibold text-foreground/80">Sewing WIP Bundles:</span>
+                                {orderSewing.map(s => (
+                                  <div key={s.bundle_id} className="flex justify-between items-center">
+                                    <span>&bull; Line {s.line_number} bundle ({s.qty} pcs, {s.operator_count} ops)</span>
+                                    <span>QC: {s.inline_qc_result}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {(stg.id === 9 || stg.id === 10) && orderWash.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px] font-mono-data text-primary">
+                                <span className="font-semibold text-foreground/80">Laundry Finishing Batches:</span>
+                                {orderWash.map(w => (
+                                  <div key={w.batch_id}>
+                                    &bull; Batch {w.batch_id} ({w.pcs_qty} pcs, Equip: {w.equipment_used}, stage: {w.stage})
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {stg.id === 11 && orderQc.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px] font-mono-data text-primary">
+                                <span className="font-semibold text-foreground/80">Quality Audits Logs:</span>
+                                {orderQc.map(q => (
+                                  <div key={q.qc_id} className="flex justify-between">
+                                    <span>&bull; {q.stage_checkpoint} (Inspected: {q.inspected_qty} pcs)</span>
+                                    <span>Outcome: {q.result}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {(stg.id === 12 || stg.id === 13) && orderCartons.length > 0 && (
+                              <div className="border-t border-border/40 pt-1.5 space-y-1 text-[11px] font-mono-data text-primary">
+                                <span className="font-semibold text-foreground/80">Carton Shipments:</span>
+                                {orderCartons.map(c => (
+                                  <div key={c.carton_id} className="flex justify-between">
+                                    <span>&bull; Carton {c.carton_id} ({c.packed_qty} pcs)</span>
+                                    <span>{c.dispatch_status} (POD: {c.pod_reference || "None"})</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+
+                            {/* Inline "Quick Add" Actions for the Current Stage Card Only */}
+                            {isCurrent && !isCustomer && (
+                              <div className="mt-3 pt-2.5 border-t border-border/40">
+                                {stg.id === 2 && (
+                                  <button
+                                    onClick={() => { setMatType("Fabric"); setActiveModal("material"); }}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log Material Receipt
+                                  </button>
+                                )}
+                                {stg.id === 3 && (
+                                  <button
+                                    onClick={() => { setMatType("Trim"); setActiveModal("material"); }}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log Trim/Accessory Receipt
+                                  </button>
+                                )}
+                                {stg.id === 5 && (
+                                  <button
+                                    onClick={() => setActiveModal("cutting")}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log Cutting Job
+                                  </button>
+                                )}
+                                {(stg.id === 6 || stg.id === 7) && (
+                                  <button
+                                    onClick={() => setActiveModal("sewing")}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log Sewing Bundle
+                                  </button>
+                                )}
+                                {(stg.id === 9 || stg.id === 10) && (
+                                  <button
+                                    onClick={() => setActiveModal("wash")}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log Wash Batch
+                                  </button>
+                                )}
+                                {stg.id === 11 && (
+                                  <button
+                                    onClick={() => setActiveModal("qc")}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Log QC Audit
+                                  </button>
+                                )}
+                                {stg.id === 12 && (
+                                  <button
+                                    onClick={() => setActiveModal("carton")}
+                                    className="text-xs font-bold text-secondary hover:text-black flex items-center gap-1"
+                                  >
+                                    <Plus className="h-3.5 w-3.5" /> Create Carton
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          </div>
+
+          {/* Widgets Pane (Right 1 Column) */}
+          <div className="space-y-6">
+            {/* QC Checkpoint Summary */}
+            <SectionCard title="QC Checkpoints Summary">
+              {orderQc.length === 0 ? (
+                <div className="text-center py-6 text-xs text-muted-foreground space-y-2">
+                  <Award className="h-8 w-8 text-muted/60 mx-auto" />
+                  <p>No QC checkpoint audits registered for this order yet.</p>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="rounded-md bg-success/10 border border-success/30 p-2.5">
+                      <div className="text-[10px] uppercase text-muted-foreground">Pass</div>
+                      <div className="mt-1 text-lg font-bold text-success font-display">
+                        {qcStats.pass.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">pcs</div>
+                    </div>
+                    <div className="rounded-md bg-gold/10 border border-gold/30 p-2.5">
+                      <div className="text-[10px] uppercase text-muted-foreground">Rework</div>
+                      <div className="mt-1 text-lg font-bold text-warning-foreground font-display">
+                        {qcStats.rework.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">pcs</div>
+                    </div>
+                    <div className="rounded-md bg-destructive/10 border border-destructive/30 p-2.5">
+                      <div className="text-[10px] uppercase text-muted-foreground">Reject</div>
+                      <div className="mt-1 text-lg font-bold text-destructive font-display">
+                        {qcStats.reject.toLocaleString()}
+                      </div>
+                      <div className="text-[9px] text-muted-foreground">pcs</div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border/60 pt-3">
+                    <div className="text-xs uppercase tracking-wider text-muted-foreground font-bold mb-2">
+                      Audited Checkpoints
+                    </div>
+                    <div className="space-y-2">
+                      {orderQc.map((q) => (
+                        <div key={q.qc_id} className="flex justify-between items-center text-xs border-b border-border/40 pb-1.5">
+                          <div>
+                            <span className="font-semibold text-foreground block">{q.stage_checkpoint}</span>
+                            <span className="text-[10px] text-muted-foreground">Inspected: {q.inspected_qty} pcs</span>
+                          </div>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${
+                            q.result === "Pass" 
+                              ? "bg-success/10 text-success border-success/20" 
+                              : q.result === "Rework" 
+                              ? "bg-gold/10 text-warning-foreground border-gold/20" 
+                              : "bg-destructive/10 text-destructive border-destructive/20"
+                          }`}>
+                            {q.result}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </SectionCard>
+
+            {/* Gated notes / Documents */}
+            <SectionCard title="Order Notes &amp; Documents">
+              <form onSubmit={handleSaveNotes} className="space-y-4">
+                <div className="relative">
+                  <textarea
+                    value={noteText}
+                    onChange={(e) => setNoteText(e.target.value)}
+                    placeholder={canEditNotes ? "Add freeform specifications, notes, or technical comments..." : "No order notes logged."}
+                    className="w-full h-36 border border-outline-variant bg-card text-xs p-3 rounded-lg focus:outline-none focus:ring-1 focus:ring-secondary focus:border-secondary resize-none"
+                    disabled={!canEditNotes}
+                  />
+                  {!canEditNotes && (
+                    <div className="absolute top-2 right-2 bg-muted/80 text-muted-foreground border text-[9px] px-1 py-0.5 rounded flex items-center gap-0.5 pointer-events-none">
+                      Read Only
+                    </div>
+                  )}
+                </div>
+
+                {canEditNotes && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] text-muted-foreground">
+                      Only visible to admin, merchandiser, and production.
+                    </span>
+                    <button
+                      type="submit"
+                      className="bg-primary hover:bg-black text-white hover:text-white px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <Save className="h-3.5 w-3.5" /> Save Notes
+                    </button>
+                  </div>
+                )}
+
+                {isSaved && (
+                  <div className="text-xs text-success font-semibold text-right transition-all">
+                    Notes updated successfully.
+                  </div>
+                )}
+              </form>
+            </SectionCard>
+          </div>
+        </div>
+
+        {/* Derived Order Activity Event Log */}
+        <div className="mt-6">
+          <SectionCard title="Order Activity &amp; Event Log">
+            {activityLog.length === 0 ? (
+              <div className="text-center py-6 text-xs text-muted-foreground">
+                No activity logs recorded for this order yet.
+              </div>
+            ) : (
+              <div className="relative border-l border-border ml-2 pl-4 space-y-4 py-2">
+                {activityLog.map((act, i) => (
+                  <div key={act.id + i} className="relative text-xs">
+                    <span className="absolute -left-6 top-1 h-3 w-3 rounded-full bg-primary/20 border border-primary flex items-center justify-center">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    </span>
+                    <div className="flex flex-wrap justify-between items-center gap-2">
+                      <div>
+                        <span className="font-semibold text-foreground">{act.title}</span>
+                        <span className="ml-2 text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground font-medium">
+                          {act.stageName}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-muted-foreground font-mono-data">{act.date}</span>
+                    </div>
+                    <p className="mt-1 text-muted-foreground text-[11px]">{act.detail}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </SectionCard>
+        </div>
+      </div>
+
+      {/* Material receipt Modal */}
+      {activeModal === "material" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Log Material Receipt</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleMaterialSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Type</label>
+                  <select value={matType} onChange={(e) => setMatType(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                    <option value="Fabric">Fabric</option>
+                    <option value="Trim">Trim</option>
+                    <option value="Accessory">Accessory</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Qty Received</label>
+                  <input type="number" value={matQty} onChange={(e) => setMatQty(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Description</label>
+                <input type="text" placeholder="e.g. Red Zip Fasteners 20cm" value={matDesc} onChange={(e) => setMatDesc(e.target.value)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required />
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Log Receipt</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Cutting Job Modal */}
+      {activeModal === "cutting" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Log Cutting Job</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleCuttingSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Panels Cut</label>
+                  <input type="number" value={panelsCut} onChange={(e) => setPanelsCut(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Cutter Machine</label>
+                  <select value={cutterUsed} onChange={(e) => setCutterUsed(e.target.value)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                    {activeCutters.map(eq => (
+                      <option key={eq.id} value={eq.name}>{eq.name}</option>
+                    ))}
+                    {activeCutters.length === 0 && <option value="Manual Cutter 1">Manual Cutter 1</option>}
+                  </select>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Size</label>
+                  <input type="text" value={cutSize} onChange={(e) => setCutSize(e.target.value)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Color</label>
+                  <input type="text" value={cutColor} onChange={(e) => setCutColor(e.target.value)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Status</label>
+                <select value={cutStatus} onChange={(e) => setCutStatus(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Log Job</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Sewing Bundle Modal */}
+      {activeModal === "sewing" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Log Sewing Bundle</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleSewingSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Line #</label>
+                  <select value={sewLine} onChange={(e) => setSewLine(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                    {activeSewing.map(eq => {
+                      const m = eq.name.match(/\d+/);
+                      return <option key={eq.id} value={m ? parseInt(m[0], 10) : 1}>{eq.name}</option>;
+                    })}
+                    {activeSewing.length === 0 && (
+                      <>
+                        <option value={1}>Line 1</option>
+                        <option value={2}>Line 2</option>
+                        <option value={3}>Line 3</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Operators</label>
+                  <input type="number" value={opsCount} onChange={(e) => setOpsCount(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Qty</label>
+                  <input type="number" value={sewQty} onChange={(e) => setSewQty(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">QC Result</label>
+                  <select value={sewQcResult} onChange={(e) => setSewQcResult(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                    <option value="Pass">Pass</option>
+                    <option value="Rework">Rework</option>
+                    <option value="Reject">Reject</option>
+                  </select>
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Log Sewing</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Wash Batch Modal */}
+      {activeModal === "wash" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Log Wash Batch</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleWashSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Pcs Qty</label>
+                  <input type="number" value={washQty} onChange={(e) => setWashQty(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Equipment</label>
+                  <select value={washEquip} onChange={(e) => setWashEquip(e.target.value)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                    {activeWash.map(eq => (
+                      <option key={eq.id} value={eq.name}>{eq.name}</option>
+                    ))}
+                    {activeWash.length === 0 && 
+                      FINISHING_EQUIPMENT.map(eq => (
+                        <option key={eq} value={eq}>{eq}</option>
+                      ))
+                    }
+                  </select>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Stage</label>
+                <select value={washStage} onChange={(e) => setWashStage(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                  <option value="Wash">Wash</option>
+                  <option value="Dry">Dry</option>
+                  <option value="Finish">Finish</option>
+                  <option value="Approved">Approved</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Log Batch</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* QC Audit Modal */}
+      {activeModal === "qc" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Log QC Audit</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleQcSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Checkpoint</label>
+                <select value={qcCheckpoint} onChange={(e) => setQcCheckpoint(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                  <option value="Material Check">Material Check</option>
+                  <option value="First Cut Approval">First Cut Approval</option>
+                  <option value="Inline Sewing QC">Inline Sewing QC</option>
+                  <option value="Wash-Finish Approval">Wash-Finish Approval</option>
+                  <option value="Final AQL-Packing Audit">Final AQL-Packing Audit</option>
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Inspected</label>
+                  <input type="number" value={qcInspected} onChange={(e) => setQcInspected(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary text-success">Pass</label>
+                  <input type="number" value={qcPass} onChange={(e) => setQcPass(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={0} />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-semibold uppercase tracking-wider text-primary text-destructive">Reject</label>
+                  <input type="number" value={qcReject} onChange={(e) => setQcReject(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={0} />
+                </div>
+              </div>
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">AQL Result</label>
+                <select value={qcResult} onChange={(e) => setQcResult(e.target.value as any)} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none">
+                  <option value="Pass">Pass</option>
+                  <option value="Rework">Rework</option>
+                  <option value="Reject">Reject</option>
+                </select>
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Log QC Audit</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Create Carton Modal */}
+      {activeModal === "carton" && (
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up text-left">
+            <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent">
+              <X className="h-5 w-5" />
+            </button>
+            <h3 className="font-display text-lg font-bold text-primary mb-1">Create Carton</h3>
+            <p className="text-xs text-muted-foreground mb-6">Order: {order.order_id} ({order.customer_name})</p>
+            <form onSubmit={handleCartonSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Packed Qty (pcs)</label>
+                <input type="number" value={cartonQty} onChange={(e) => setCartonQty(Number(e.target.value))} className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none" required min={1} />
+              </div>
+              <button type="submit" className="w-full bg-primary hover:bg-black text-white h-10 rounded-lg text-xs font-semibold flex items-center justify-center transition-colors">Create Carton</button>
+            </form>
+          </div>
+        </div>
+      )}
+    </AppShell>
+  );
+}
