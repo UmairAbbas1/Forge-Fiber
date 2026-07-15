@@ -23,7 +23,7 @@ const DEMO_USERS = [
 
 function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, signUp, user } = useAuth();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -65,10 +65,43 @@ function LoginPage() {
     setEmail(demoEmail);
     setPassword("password123");
 
+    const demoUser = DEMO_USERS.find((u) => u.email === demoEmail);
+    const role = demoUser ? (demoUser.role as any) : "customer";
+    const customerName = role === "customer" ? "Levi Strauss & Co." : undefined;
+
     try {
-      const { error } = await signIn(demoEmail, "password123");
+      let { error } = await signIn(demoEmail, "password123");
+      
+      // If user does not exist on Supabase Auth, automatically register them!
+      if (error && (
+        error.message.toLowerCase().includes("invalid login credentials") || 
+        error.message.toLowerCase().includes("does not exist") || 
+        error.message.toLowerCase().includes("email not confirmed")
+      )) {
+        console.log("Quick login user not found, auto-creating demo account...");
+        const { error: signUpError } = await signUp(demoEmail, "password123", role, customerName);
+        
+        if (signUpError) {
+          if (signUpError.message.includes("Email confirmation")) {
+            setErrorMsg("Email confirmation is enabled. Please disable 'Confirm email' in your Supabase Auth provider settings to use quick login.");
+          } else {
+            setErrorMsg(signUpError.message);
+          }
+          setSubmitting(false);
+          return;
+        }
+        
+        // Retry logging in now that user is registered
+        const retry = await signIn(demoEmail, "password123");
+        error = retry.error;
+      }
+
       if (error) {
-        setErrorMsg(error.message);
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          setErrorMsg("Please disable 'Confirm email' in your Supabase Auth provider settings to enable quick login.");
+        } else {
+          setErrorMsg(error.message);
+        }
       } else {
         navigate({ to: "/dashboard" });
       }

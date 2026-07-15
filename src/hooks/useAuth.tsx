@@ -33,12 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session?.user) {
             const { data: profile } = await supabase
               .from("profiles")
-              .select("*")
+              .select("*, customers(name)")
               .eq("id", session.user.id)
               .single();
             
             if (profile) {
-              setUser(profile);
+              setUser({
+                ...profile,
+                customer_name: (profile as any).customers?.name || (profile as any).customer_name
+              });
             } else {
               // fallback if profile record hasn't synced yet
               setUser({
@@ -64,10 +67,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (session?.user) {
             const { data: profile } = await supabase
               .from("profiles")
-              .select("*")
+              .select("*, customers(name)")
               .eq("id", session.user.id)
               .single();
-            if (profile) setUser(profile);
+            if (profile) {
+              setUser({
+                ...profile,
+                customer_name: (profile as any).customers?.name || (profile as any).customer_name
+              });
+            }
           } else {
             setUser(null);
           }
@@ -141,6 +149,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     customerName?: string
   ) => {
     if (isRealSupabase) {
+      let customerId: string | undefined = undefined;
+      if (customerName) {
+        const { data: customerData } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("name", customerName)
+          .maybeSingle();
+        if (customerData) {
+          customerId = customerData.id;
+        }
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
@@ -148,6 +168,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             role,
             customer_name: customerName,
+            customer_id: customerId,
           },
         },
       });

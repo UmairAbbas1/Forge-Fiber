@@ -67,9 +67,13 @@ function SettingsPage() {
   useEffect(() => {
     const fetchProfiles = async () => {
       if (isRealSupabase) {
-        const { data, error } = await supabase.from("profiles").select("*");
+        const { data, error } = await supabase.from("profiles").select("*, customers(name)");
         if (!error && data) {
-          setProfiles(data);
+          const mapped = data.map((p: any) => ({
+            ...p,
+            customer_name: p.customers?.name || p.customer_name
+          }));
+          setProfiles(mapped);
         }
       } else {
         setProfiles(getMockProfiles());
@@ -103,8 +107,14 @@ function SettingsPage() {
         setStatusMsg("User authorization updated successfully.");
         // Refresh local profiles state
         if (isRealSupabase) {
-          const { data } = await supabase.from("profiles").select("*");
-          if (data) setProfiles(data);
+          const { data } = await supabase.from("profiles").select("*, customers(name)");
+          if (data) {
+            const mapped = data.map((p: any) => ({
+              ...p,
+              customer_name: p.customers?.name || p.customer_name
+            }));
+            setProfiles(mapped);
+          }
         } else {
           setProfiles(getMockProfiles());
         }
@@ -130,8 +140,14 @@ function SettingsPage() {
           .eq("id", userId);
         if (error) throw error;
         
-        const { data } = await supabase.from("profiles").select("*");
-        if (data) setProfiles(data);
+        const { data } = await supabase.from("profiles").select("*, customers(name)");
+        if (data) {
+          const mapped = data.map((p: any) => ({
+            ...p,
+            customer_name: p.customers?.name || p.customer_name
+          }));
+          setProfiles(mapped);
+        }
       } else {
         const profs = getMockProfiles();
         const idx = profs.findIndex((p) => p.id === userId);
