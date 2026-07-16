@@ -41,6 +41,7 @@ function Page() {
 
   // Search filter
   const [q, setQ] = useState("");
+  const [formError, setFormError] = useState("");
 
   // Role Guarding
   useEffect(() => {
@@ -63,7 +64,23 @@ function Page() {
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedOrderId || inspectedQty <= 0) return;
+    setFormError("");
+    if (!selectedOrderId) {
+      setFormError("Please select an order before logging a QC audit.");
+      return;
+    }
+    if (inspectedQty <= 0) {
+      setFormError("Inspected quantity must be greater than zero.");
+      return;
+    }
+    if (passQty < 0 || rejectQty < 0) {
+      setFormError("Pass and reject quantities cannot be negative.");
+      return;
+    }
+    if (passQty + rejectQty > inspectedQty) {
+      setFormError(`Pass (${passQty}) + Reject (${rejectQty}) quantities cannot exceed total inspected (${inspectedQty}).`);
+      return;
+    }
     addQCRecord({
       qc_id: `QA-${Date.now().toString().slice(-5)}`,
       order_id: selectedOrderId,
@@ -81,6 +98,7 @@ function Page() {
     setPassQty(98);
     setRejectQty(2);
     setResult("Pass");
+    setFormError("");
     setShowAddModal(false);
   };
 
@@ -237,13 +255,20 @@ function Page() {
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-xl border border-outline-variant max-w-md w-full shadow-2xl p-6 relative animate-scale-up">
             <button
-              onClick={() => setShowAddModal(false)}
+              onClick={() => { setShowAddModal(false); setFormError(""); }}
               className="absolute top-4 right-4 p-1.5 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent"
             >
               <X className="h-5 w-5" />
             </button>
             <h3 className="font-display text-lg font-bold text-primary mb-1">Log QC Audit</h3>
-            <p className="text-xs text-muted-foreground mb-6">Create quality check sheets audit card.</p>
+            <p className="text-xs text-muted-foreground mb-4">Create quality check sheets audit card.</p>
+
+            {formError && (
+              <div className="bg-destructive/10 text-destructive p-3 rounded-lg flex items-center gap-2 text-xs border border-destructive/25 mb-4">
+                <span className="shrink-0">⚠</span>
+                <span>{formError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleAddSubmit} className="space-y-4">
               {/* Order Combobox */}
