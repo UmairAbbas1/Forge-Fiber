@@ -67,15 +67,15 @@ function Page() {
   }, [user, navigate]);
 
   const filtered = useMemo(() => {
-    const qLow = globalSearchQuery.toLowerCase().trim();
+    const qLow = globalSearchQuery?.toLowerCase()?.trim() || "";
     return orders.filter((o) => {
       const matchQ = qLow === "" ||
-        o.order_id.toLowerCase().includes(qLow) ||
-        o.customer_name.toLowerCase().includes(qLow) ||
-        o.PO_number.toLowerCase().includes(qLow) ||
-        o.tech_pack_ref.toLowerCase().includes(qLow) ||
-        o.size_breakdown.toLowerCase().includes(qLow) ||
-        o.status.toLowerCase().includes(qLow);
+        o.order_id?.toLowerCase()?.includes(qLow) ||
+        o.customer_name?.toLowerCase()?.includes(qLow) ||
+        o.PO_number?.toLowerCase()?.includes(qLow) ||
+        o.tech_pack_ref?.toLowerCase()?.includes(qLow) ||
+        o.size_breakdown?.toLowerCase()?.includes(qLow) ||
+        o.status?.toLowerCase()?.includes(qLow);
       const matchS = status === "All" || o.status === status;
       return matchQ && matchS;
     });

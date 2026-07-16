@@ -103,16 +103,16 @@ function Page() {
   };
 
   const filteredQC = useMemo(() => {
-    const searchVal = globalSearchQuery.toLowerCase().trim();
+    const searchVal = globalSearchQuery?.toLowerCase()?.trim() || "";
     if (!searchVal) return qc;
     return qc.filter((item) => {
       const parentOrder = orders.find((o) => o.order_id === item.order_id);
       return (
-        item.qc_id.toLowerCase().includes(searchVal) ||
-        item.order_id.toLowerCase().includes(searchVal) ||
-        item.stage_checkpoint.toLowerCase().includes(searchVal) ||
-        (parentOrder && parentOrder.customer_name.toLowerCase().includes(searchVal)) ||
-        (parentOrder && parentOrder.PO_number.toLowerCase().includes(searchVal))
+        item.qc_id?.toLowerCase()?.includes(searchVal) ||
+        item.order_id?.toLowerCase()?.includes(searchVal) ||
+        item.stage_checkpoint?.toLowerCase()?.includes(searchVal) ||
+        (parentOrder && parentOrder.customer_name?.toLowerCase()?.includes(searchVal)) ||
+        (parentOrder && parentOrder.PO_number?.toLowerCase()?.includes(searchVal))
       );
     });
   }, [qc, orders, globalSearchQuery]);

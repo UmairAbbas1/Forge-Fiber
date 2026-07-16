@@ -91,17 +91,16 @@ function Page() {
   };
 
   const filteredMaterials = useMemo(() => {
-    const qLow = globalSearchQuery.toLowerCase().trim();
+    const qLow = globalSearchQuery?.toLowerCase()?.trim() || "";
     if (!qLow) return materials;
     return materials.filter((m) => {
       const parentOrder = orders.find((o) => o.order_id === m.order_id);
       return (
-        m.material_id.toLowerCase().includes(qLow) ||
-        m.order_id.toLowerCase().includes(qLow) ||
-        m.description.toLowerCase().includes(qLow) ||
-        m.type.toLowerCase().includes(qLow) ||
-        (parentOrder && parentOrder.customer_name.toLowerCase().includes(qLow)) ||
-        (parentOrder && parentOrder.PO_number.toLowerCase().includes(qLow))
+        m.material_id?.toLowerCase()?.includes(qLow) ||
+        m.order_id?.toLowerCase()?.includes(qLow) ||
+        m.description?.toLowerCase()?.includes(qLow) ||
+        (parentOrder && parentOrder.customer_name?.toLowerCase()?.includes(qLow)) ||
+        (parentOrder && parentOrder.PO_number?.toLowerCase()?.includes(qLow))
       );
     });
   }, [materials, orders, globalSearchQuery]);

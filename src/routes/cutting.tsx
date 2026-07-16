@@ -103,18 +103,18 @@ function Page() {
   };
 
   const filteredCutting = useMemo(() => {
-    const qLow = globalSearchQuery.toLowerCase().trim();
+    const qLow = globalSearchQuery?.toLowerCase()?.trim() || "";
     if (!qLow) return cutting;
     return cutting.filter((c) => {
       const parentOrder = orders.find((o) => o.order_id === c.order_id);
       return (
-        c.cut_id.toLowerCase().includes(qLow) ||
-        c.order_id.toLowerCase().includes(qLow) ||
-        c.cutter_used.toLowerCase().includes(qLow) ||
-        c.size.toLowerCase().includes(qLow) ||
-        c.color.toLowerCase().includes(qLow) ||
-        (parentOrder && parentOrder.customer_name.toLowerCase().includes(qLow)) ||
-        (parentOrder && parentOrder.PO_number.toLowerCase().includes(qLow))
+        c.cut_id?.toLowerCase()?.includes(qLow) ||
+        c.order_id?.toLowerCase()?.includes(qLow) ||
+        c.cutter_used?.toLowerCase()?.includes(qLow) ||
+        c.size?.toLowerCase()?.includes(qLow) ||
+        c.color?.toLowerCase()?.includes(qLow) ||
+        (parentOrder && parentOrder.customer_name?.toLowerCase()?.includes(qLow)) ||
+        (parentOrder && parentOrder.PO_number?.toLowerCase()?.includes(qLow))
       );
     });
   }, [cutting, orders, globalSearchQuery]);

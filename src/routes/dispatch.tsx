@@ -44,9 +44,9 @@ function Page() {
     return cartons.filter((c) => {
       const order = orders.find((o) => o.order_id === c.order_id);
       const matchQ = globalSearchQuery === "" ||
-        c.carton_id.toLowerCase().includes(globalSearchQuery.toLowerCase()) ||
-        c.order_id.toLowerCase().includes(globalSearchQuery.toLowerCase()) ||
-        (order && order.customer_name.toLowerCase().includes(globalSearchQuery.toLowerCase()));
+        c.carton_id?.toLowerCase()?.includes(globalSearchQuery?.toLowerCase() || "") ||
+        c.order_id?.toLowerCase()?.includes(globalSearchQuery?.toLowerCase() || "") ||
+        (order && order.customer_name?.toLowerCase()?.includes(globalSearchQuery?.toLowerCase() || ""));
       const matchStatus = statusFilter === "All" || c.dispatch_status === statusFilter;
       return matchQ && matchStatus;
     });
