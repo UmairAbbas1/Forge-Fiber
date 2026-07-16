@@ -110,15 +110,20 @@ function Page() {
   };
 
   const filteredWash = useMemo(() => {
+    const qLow = q.toLowerCase().trim();
+    if (!qLow) return wash;
     return wash.filter((w) => {
-      if (q === "") return true;
+      const parentOrder = orders.find((o) => o.order_id === w.order_id);
       return (
-        w.batch_id.toLowerCase().includes(q.toLowerCase()) ||
-        w.order_id.toLowerCase().includes(q.toLowerCase()) ||
-        w.equipment_used.toLowerCase().includes(q.toLowerCase())
+        w.batch_id.toLowerCase().includes(qLow) ||
+        w.order_id.toLowerCase().includes(qLow) ||
+        w.equipment_used.toLowerCase().includes(qLow) ||
+        w.stage.toLowerCase().includes(qLow) ||
+        (parentOrder && parentOrder.customer_name.toLowerCase().includes(qLow)) ||
+        (parentOrder && parentOrder.PO_number.toLowerCase().includes(qLow))
       );
     });
-  }, [wash, q]);
+  }, [wash, orders, q]);
 
   // Loading skeleton state
   if (isLoading) {

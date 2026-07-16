@@ -95,15 +95,19 @@ function Page() {
   };
 
   const filteredSewing = useMemo(() => {
+    const qLow = q.toLowerCase().trim();
+    if (!qLow) return sewing;
     return sewing.filter((s) => {
-      if (q === "") return true;
+      const parentOrder = orders.find((o) => o.order_id === s.order_id);
       return (
-        s.bundle_id.toLowerCase().includes(q.toLowerCase()) ||
-        s.order_id.toLowerCase().includes(q.toLowerCase()) ||
-        `line ${s.line_number}`.toLowerCase().includes(q.toLowerCase())
+        s.bundle_id.toLowerCase().includes(qLow) ||
+        s.order_id.toLowerCase().includes(qLow) ||
+        `line ${s.line_number}`.toLowerCase().includes(qLow) ||
+        (parentOrder && parentOrder.customer_name.toLowerCase().includes(qLow)) ||
+        (parentOrder && parentOrder.PO_number.toLowerCase().includes(qLow))
       );
     });
-  }, [sewing, q]);
+  }, [sewing, orders, q]);
 
   // Loading skeleton state
   if (isLoading) {
