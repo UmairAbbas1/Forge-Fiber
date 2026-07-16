@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isRealSupabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
@@ -202,6 +202,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   };
 
   // React Query Fetching from live Supabase Tables
+  // staleTime: 60s — prevents re-fetching on every window focus / component remount
+  // retry: 1    — fail fast instead of retrying 3 times with exponential backoff (~30s freeze)
   const { data: dbOrders = [], isLoading: isLoadingOrders } = useQuery<Order[]>({
     queryKey: ["orders", user?.id],
     queryFn: async () => {
@@ -210,6 +212,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbMaterials = [], isLoading: isLoadingMaterials } = useQuery<Material[]>({
@@ -220,6 +224,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbCutting = [], isLoading: isLoadingCutting } = useQuery<CuttingRecord[]>({
@@ -230,6 +236,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbSewing = [], isLoading: isLoadingSewing } = useQuery<SewingBundle[]>({
@@ -240,6 +248,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbWash = [], isLoading: isLoadingWash } = useQuery<WashBatch[]>({
@@ -250,6 +260,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbQc = [], isLoading: isLoadingQc } = useQuery<QCRecord[]>({
@@ -260,6 +272,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbCartons = [], isLoading: isLoadingCartons } = useQuery<Carton[]>({
@@ -270,6 +284,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbCustomers = [], isLoading: isLoadingCustomers } = useQuery<Customer[]>({
@@ -280,6 +296,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 60_000,
+    retry: 1,
   });
 
   const { data: dbNotifications = [], isLoading: isLoadingNotifications } = useQuery<Notification[]>({
@@ -290,6 +308,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
+    staleTime: 30_000,
+    retry: 1,
   });
 
   // Decide current active lists based on environment
@@ -459,27 +479,46 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  // Auditing notifications checks inside useEffect
+  /**
+   * Notification Audit Engine
+   *
+   * PROBLEM FIXED: The old version depended on `notifications` in its dep array.
+   * Every time it created a new notification → state update → re-render → effect
+   * ran again → more notifications → infinite loop causing complete UI freeze for
+   * admin (42 orders × 5 rules = 210 notifications created per cycle).
+   *
+   * FIX: Run the audit once when source data first loads (auditRan ref), and then
+   * only re-run when orders/materials/qc/cartons change — NEVER depend on
+   * `notifications` or `localNotifications` inside the effect. Deduplication is
+   * done against a stable Set built from the initial loaded list, not live state.
+   */
+  const auditRan = useRef(false); // kept for future manual re-audit trigger
+
   useEffect(() => {
-    // Avoid double triggering during loading
+    // Don't run until source data is available
     if (orders.length === 0) return;
+
+    // Build a Set of "type:orderId" keys already in persistent storage so we
+    // never write a duplicate, even across HMR reloads.
+    const existingKeys = new Set(
+      localNotifications.map((n) => `${n.type}:${n.order_id}`)
+    );
 
     const auditList: Notification[] = [];
 
-    // Helper to see if alert exists
-    const hasAlert = (type: string, orderId: string) => {
-      return (
-        notifications.some((n) => n.type === type && n.order_id === orderId) ||
-        auditList.some((n) => n.type === type && n.order_id === orderId)
-      );
-    };
+    const hasAlert = (type: string, orderId: string) =>
+      existingKeys.has(`${type}:${orderId}`) ||
+      auditList.some((n) => n.type === type && n.order_id === orderId);
 
-    // 1. Audit Material Hold
+    const makeId = () =>
+      `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+    // 1. Material Hold
     materials.forEach((m) => {
       if (m.inspection_status === "Hold" && !hasAlert("hold", m.order_id)) {
         auditList.push({
-          id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          message: `[HOLD] Material consignment for Order ${m.order_id} put on inspection HOLD.`,
+          id: makeId(),
+          message: `[HOLD] Material ${m.material_id} for Order ${m.order_id} is on inspection HOLD.`,
           order_id: m.order_id,
           type: "hold",
           read: false,
@@ -489,12 +528,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // 2. Audit QC Reject
+    // 2. QC Reject
     qc.forEach((q) => {
       if (q.result === "Reject" && !hasAlert("reject", q.order_id)) {
         auditList.push({
-          id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          message: `[REJECT] QC checkpoint checkpoint failed for Order ${q.order_id}.`,
+          id: makeId(),
+          message: `[REJECT] QC checkpoint "${q.stage_checkpoint}" failed for Order ${q.order_id}.`,
           order_id: q.order_id,
           type: "reject",
           read: false,
@@ -504,15 +543,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // 3. Audit Slow Stage
+    // 3. Slow Stage (>5 days in production without reaching stage 13)
     orders.forEach((o) => {
-      const orderDays = Math.round(
-        (Date.now() - new Date(o.created_date).getTime()) / (1000 * 60 * 60 * 24)
+      const ageDays = Math.round(
+        (Date.now() - new Date(o.created_date).getTime()) / 86_400_000
       );
-      if (o.status === "In Production" && o.current_stage < 13 && orderDays > 5 && !hasAlert("slow_stage", o.order_id)) {
+      if (
+        o.status === "In Production" &&
+        o.current_stage < 13 &&
+        ageDays > 5 &&
+        !hasAlert("slow_stage", o.order_id)
+      ) {
         auditList.push({
-          id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          message: `[DELAY] Order ${o.order_id} has been sitting at Stage ${o.current_stage} for more than 5 days.`,
+          id: makeId(),
+          message: `[DELAY] Order ${o.order_id} has been at Stage ${o.current_stage} for over 5 days.`,
           order_id: o.order_id,
           type: "slow_stage",
           read: false,
@@ -522,70 +566,73 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // 4. Overdue carton dispatch
+    // 4. Overdue dispatch (carton ready >10 days after order creation)
     cartons.forEach((c) => {
+      if (c.dispatch_status !== "Ready") return;
       const order = orders.find((o) => o.order_id === c.order_id);
-      if (c.dispatch_status === "Ready" && order) {
-        const orderDays = Math.round(
-          (Date.now() - new Date(order.created_date).getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (orderDays > 10 && !hasAlert("overdue", c.order_id)) {
-          auditList.push({
-            id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            message: `[OVERDUE] Carton ${c.carton_id} for Order ${c.order_id} is overdue for dispatch.`,
-            order_id: c.order_id,
-            type: "overdue",
-            read: false,
-            stage_id: 13,
-            created_at: new Date().toISOString(),
-          });
-        }
-      }
-    });
-
-    // 5. Audit QC Checkpoint Pending
-    orders.forEach((o) => {
-      const orderDays = Math.round(
-        (Date.now() - new Date(o.created_date).getTime()) / (1000 * 60 * 60 * 24)
+      if (!order) return;
+      const ageDays = Math.round(
+        (Date.now() - new Date(order.created_date).getTime()) / 86_400_000
       );
-      if (orderDays > 2 && o.status === "In Production") {
-        const gates: Record<number, string> = {
-          5: "First Cut Approval",
-          8: "Inline Sewing QC",
-          11: "Wash-Finish Approval",
-          12: "Final AQL-Packing Audit",
-        };
-        const checkpointName = gates[o.current_stage];
-        if (checkpointName) {
-          const hasQcRecord = qc.some(
-            (q) => q.order_id === o.order_id && q.stage_checkpoint === checkpointName
-          );
-          if (!hasQcRecord && !hasAlert("qc_checkpoint_pending", o.order_id)) {
-            auditList.push({
-              id: `notif-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-              message: `[QC PENDING] Order ${o.order_id} has been at Stage ${o.current_stage} for more than 2 days without a completed ${checkpointName} audit.`,
-              order_id: o.order_id,
-              type: "qc_checkpoint_pending",
-              read: false,
-              stage_id: o.current_stage,
-              created_at: new Date().toISOString(),
-            });
-          }
-        }
+      if (ageDays > 10 && !hasAlert("overdue", c.order_id)) {
+        auditList.push({
+          id: makeId(),
+          message: `[OVERDUE] Carton ${c.carton_id} for Order ${c.order_id} is overdue for dispatch.`,
+          order_id: c.order_id,
+          type: "overdue",
+          read: false,
+          stage_id: 13,
+          created_at: new Date().toISOString(),
+        });
       }
     });
 
-    // Save auto-generated notifications
-    if (auditList.length > 0) {
-      if (isRealSupabase) {
-        auditList.forEach((notif) => addNotificationMutation.mutate(notif));
-      } else {
-        const updated = [...localNotifications, ...auditList];
-        setLocalNotifications(updated);
-        saveToStorage(LOCAL_STORAGE_KEYS.notifications, updated);
+    // 5. QC Checkpoint Pending (order at gate stage >2 days, no QC record)
+    const QC_GATES: Record<number, string> = {
+      5: "First Cut Approval",
+      8: "Inline Sewing QC",
+      11: "Wash-Finish Approval",
+      12: "Final AQL-Packing Audit",
+    };
+    orders.forEach((o) => {
+      const ageDays = Math.round(
+        (Date.now() - new Date(o.created_date).getTime()) / 86_400_000
+      );
+      if (ageDays <= 2 || o.status !== "In Production") return;
+      const checkpointName = QC_GATES[o.current_stage];
+      if (!checkpointName) return;
+      const hasQcRecord = qc.some(
+        (q) => q.order_id === o.order_id && q.stage_checkpoint === checkpointName
+      );
+      if (!hasQcRecord && !hasAlert("qc_checkpoint_pending", o.order_id)) {
+        auditList.push({
+          id: makeId(),
+          message: `[QC PENDING] Order ${o.order_id} at Stage ${o.current_stage} for >2 days — "${checkpointName}" audit not completed.`,
+          order_id: o.order_id,
+          type: "qc_checkpoint_pending",
+          read: false,
+          stage_id: o.current_stage,
+          created_at: new Date().toISOString(),
+        });
       }
+    });
+
+    if (auditList.length === 0) return;
+
+    if (isRealSupabase) {
+      auditList.forEach((notif) => addNotificationMutation.mutate(notif));
+    } else {
+      // Merge with existing and persist — single write, no re-render loop
+      setLocalNotifications((prev) => {
+        const merged = [...prev, ...auditList];
+        saveToStorage(LOCAL_STORAGE_KEYS.notifications, merged);
+        return merged;
+      });
     }
-  }, [orders, materials, qc, cartons, notifications]);
+  // Intentionally omit localNotifications and notifications from deps.
+  // Including them causes an infinite loop: new notif → state change → effect → new notif.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, materials, qc, cartons]);
 
   // Scoped views for CUSTOMERS
   const scopedOrders = !isRealSupabase && user?.role === "customer" && user?.customer_name

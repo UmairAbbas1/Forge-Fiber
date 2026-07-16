@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { supabase, isRealSupabase, getMockProfiles, saveMockProfiles, type Profile } from "../lib/supabase";
 
 interface AuthContextType {
   user: Profile | null;
   loading: boolean;
+  authError: string | null;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (
     email: string,
@@ -18,9 +19,44 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+/** Wraps a promise with a hard timeout so auth init never stalls the UI. */
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(
+      () => reject(new Error(`Auth request timed out after ${ms}ms`)),
+      ms
+    );
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err)   => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
+/** Fetches the full profile row for a given user id. Returns null on any failure. */
+async function fetchProfile(userId: string): Promise<Profile | null> {
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*, customers(name)")
+      .eq("id", userId)
+      .single();
+    if (error || !data) return null;
+    return {
+      ...(data as any),
+      customer_name: (data as any).customers?.name || (data as any).customer_name,
+    } as Profile;
+  } catch {
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+  // Prevent the onAuthStateChange callback from overwriting a completed initAuth.
+  const initDone = useRef(false);
 
   // Load session
   useEffect(() => {
@@ -29,34 +65,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (isRealSupabase) {
       // Real Supabase Auth Flow
       const initAuth = async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("*, customers(name)")
-              .eq("id", session.user.id)
-              .single();
+        // Hard safety net — never leave loading=true for more than 12s
+        const safetyTimer = setTimeout(() => {
+          if (!initDone.current) {
+            console.warn("Auth init safety timeout fired — clearing loading state.");
+            setAuthError("Connection to authentication service timed out. Check your network.");
+            setLoading(false);
+            initDone.current = true;
+          }
+        }, 12_000);
 
-            if (profile) {
-              setUser({
-                ...profile,
-                customer_name: (profile as any).customers?.name || (profile as any).customer_name
-              });
-            } else {
-              // fallback if profile record hasn't synced yet
-              setUser({
+        try {
+          const { data: sessionData } = await supabase.auth.getSession();
+          const session = sessionData?.session ?? null;
+          if (session?.user) {
+            const profile = await fetchProfile(session.user.id);
+            setUser(
+              profile ?? {
                 id: session.user.id,
                 email: session.user.email || "",
-                role: (session.user.user_metadata?.role as any) || "customer",
+                role: (session.user.user_metadata?.role as Profile["role"]) || "customer",
                 customer_name: session.user.user_metadata?.customer_name,
                 created_at: session.user.created_at,
-              });
-            }
+              }
+            );
           }
-        } catch (e) {
-          console.error("Auth loading failed", e);
+        } catch (e: any) {
+          console.error("Auth loading failed:", e?.message ?? e);
+          setAuthError("Failed to connect to authentication service. Running in offline mode.");
         } finally {
+          clearTimeout(safetyTimer);
+          initDone.current = true;
           setLoading(false);
         }
       };
@@ -65,18 +104,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event: AuthChangeEvent, session: Session | null) => {
+          // SIGNED_OUT should always update, but INITIAL_SESSION is handled by initAuth.
+          if (event === "SIGNED_OUT") {
+            setUser(null);
+            setLoading(false);
+            return;
+          }
+          // Skip if initAuth hasn't completed yet — it will set state itself.
+          if (!initDone.current) return;
+
           if (session?.user) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("*, customers(name)")
-              .eq("id", session.user.id)
-              .single();
-            if (profile) {
-              setUser({
-                ...profile,
-                customer_name: (profile as any).customers?.name || (profile as any).customer_name
-              });
-            }
+            const profile = await fetchProfile(session.user.id);
+            if (profile) setUser(profile);
           } else {
             setUser(null);
           }
@@ -88,18 +127,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         subscription.unsubscribe();
       };
     } else {
-      // Local Mock Auth Flow
-      const mockSession = localStorage.getItem("forge_flow_session");
-      if (mockSession) {
-        try {
+      // Local Mock Auth Flow — synchronous, never blocks
+      try {
+        const mockSession = localStorage.getItem("forge_flow_session");
+        if (mockSession) {
           const parsed = JSON.parse(mockSession) as Profile;
-          // Refresh from mock profiles list in case role changed
           const profiles = getMockProfiles();
           const fresh = profiles.find((p) => p.id === parsed.id) || parsed;
           setUser(fresh);
-        } catch (e) {
-          localStorage.removeItem("forge_flow_session");
         }
+      } catch (e) {
+        localStorage.removeItem("forge_flow_session");
       }
       setLoading(false);
     }
@@ -108,19 +146,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Sign In
   const signIn = async (email: string, password: string) => {
     if (isRealSupabase) {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) return { error };
-      // Check deactivation state
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("deactivated")
-        .eq("id", data.user?.id)
-        .single();
-      if (profile?.deactivated) {
-        await supabase.auth.signOut();
-        return { error: new Error("This account is deactivated.") };
+      try {
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) return { error };
+        // Check deactivation state
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("deactivated")
+          .eq("id", data.user?.id)
+          .single();
+        if (profile?.deactivated) {
+          await supabase.auth.signOut();
+          return { error: new Error("This account is deactivated.") };
+        }
+        return { error: null };
+      } catch (e: any) {
+        return { error: new Error(e?.message ?? "Sign in failed. Please check your connection.") };
       }
-      return { error: null };
     } else {
       // Find matching mock user
       const profiles = getMockProfiles();
@@ -237,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signUp, signOut, updateUserRole }}>
+    <AuthContext.Provider value={{ user, loading, authError, signIn, signUp, signOut, updateUserRole }}>
       {children}
     </AuthContext.Provider>
   );
