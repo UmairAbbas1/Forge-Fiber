@@ -77,15 +77,20 @@ function Page() {
   };
 
   const filteredMaterials = useMemo(() => {
+    const qLow = q.toLowerCase().trim();
+    if (!qLow) return materials;
     return materials.filter((m) => {
-      if (q === "") return true;
+      const parentOrder = orders.find((o) => o.order_id === m.order_id);
       return (
-        m.material_id.toLowerCase().includes(q.toLowerCase()) ||
-        m.order_id.toLowerCase().includes(q.toLowerCase()) ||
-        m.description.toLowerCase().includes(q.toLowerCase())
+        m.material_id.toLowerCase().includes(qLow) ||
+        m.order_id.toLowerCase().includes(qLow) ||
+        m.description.toLowerCase().includes(qLow) ||
+        m.type.toLowerCase().includes(qLow) ||
+        (parentOrder && parentOrder.customer_name.toLowerCase().includes(qLow)) ||
+        (parentOrder && parentOrder.PO_number.toLowerCase().includes(qLow))
       );
     });
-  }, [materials, q]);
+  }, [materials, orders, q]);
 
   // Loading skeleton state
   if (isLoading) {
