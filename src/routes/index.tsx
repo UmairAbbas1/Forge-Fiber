@@ -61,30 +61,7 @@ function LandingPage() {
           </div>
           
           <div className="hidden md:flex gap-8 items-center">
-            <Link
-              to="/dashboard"
-              className="text-on-surface-variant hover:text-secondary transition-colors font-label-caps text-xs uppercase tracking-wider font-semibold"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/materials"
-              className="text-on-surface-variant hover:text-secondary transition-colors font-label-caps text-xs uppercase tracking-wider font-semibold"
-            >
-              Inventory
-            </Link>
-            <Link
-              to="/sewing"
-              className="text-on-surface-variant hover:text-secondary transition-colors font-label-caps text-xs uppercase tracking-wider font-semibold"
-            >
-              Production
-            </Link>
-            <Link
-              to="/qc"
-              className="text-on-surface-variant hover:text-secondary transition-colors font-label-caps text-xs uppercase tracking-wider font-semibold"
-            >
-              Logistics
-            </Link>
+            {/* Navigation links have been removed for unauthenticated landing page */}
           </div>
 
           <div className="flex items-center gap-3">
@@ -107,34 +84,6 @@ function LandingPage() {
         {/* Mobile Navigation Menu */}
         {mobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-surface-container-lowest border-b border-outline-variant p-6 space-y-4 shadow-xl">
-            <Link
-              to="/dashboard"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-on-surface-variant hover:text-secondary font-label-caps text-sm tracking-wider uppercase font-semibold"
-            >
-              Dashboard
-            </Link>
-            <Link
-              to="/materials"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-on-surface-variant hover:text-secondary font-label-caps text-sm tracking-wider uppercase font-semibold"
-            >
-              Inventory
-            </Link>
-            <Link
-              to="/sewing"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-on-surface-variant hover:text-secondary font-label-caps text-sm tracking-wider uppercase font-semibold"
-            >
-              Production
-            </Link>
-            <Link
-              to="/qc"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block text-on-surface-variant hover:text-secondary font-label-caps text-sm tracking-wider uppercase font-semibold"
-            >
-              Logistics
-            </Link>
             <Link
               to="/dashboard"
               onClick={() => setMobileMenuOpen(false)}
