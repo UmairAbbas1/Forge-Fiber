@@ -220,7 +220,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       const profiles = getMockProfiles();
       if (profiles.some((p) => p.email.toLowerCase() === email.toLowerCase())) {
-        return { error: new Error("User already exists") };
+        return { error: new Error("This email is already registered.") };
       }
 
       const newProfile: Profile = {
