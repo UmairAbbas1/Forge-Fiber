@@ -43,8 +43,9 @@ function SignupPage() {
       setErrorMsg("Please enter a valid email address (e.g. name@company.com).");
       return;
     }
-    if (password.length < 6) {
-      setErrorMsg("Password must be at least 6 characters.");
+    const strongPasswordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!strongPasswordRegex.test(password)) {
+      setErrorMsg("Password must be at least 8 characters long, and include an uppercase letter, a lowercase letter, a number, and a special character.");
       return;
     }
     if (password !== confirmPassword) {
@@ -144,12 +145,12 @@ function SignupPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="Strong password required"
                   className="w-full pl-9 pr-3 h-10 rounded-lg border border-outline-variant bg-surface text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
                   disabled={submitting}
                 />
               </div>
-              <p className="text-[10px] text-muted-foreground mt-1">Minimum 6 characters required.</p>
+              <p className="text-[10px] text-muted-foreground mt-1">Minimum 8 characters, uppercase, lowercase, number, special char.</p>
             </div>
 
             <div className="space-y-1">
@@ -176,7 +177,7 @@ function SignupPage() {
               <select
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                className="w-full px-3 h-10 rounded-lg border border-outline-variant bg-white text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
+                className="w-full px-3 h-10 rounded-lg border border-outline-variant bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 disabled={submitting}
               >
                 {customers.map((c) => (
