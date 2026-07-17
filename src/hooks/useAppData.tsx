@@ -83,8 +83,8 @@ interface AppDataContextType {
   advanceOrderStage: (orderId: string, toStage: number) => void;
   isOrderOnHold: (orderId: string) => boolean;
   isLoading: boolean;
-  toast: { message: string; type: "success" | "info" } | null;
-  setToast: (toast: { message: string; type: "success" | "info" } | null) => void;
+  toast: { message: string; type: "success" | "info" | "error" } | null;
+  setToast: (toast: { message: string; type: "success" | "info" | "error" } | null) => void;
 }
 
 const AppDataContext = createContext<AppDataContextType | undefined>(undefined);
@@ -157,8 +157,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [localNotifications, setLocalNotifications] = useState<Notification[]>([]);
 
   // Toast notifications state
-  const [toast, setToastState] = useState<{ message: string; type: "success" | "info" } | null>(null);
-  const setToast = (t: { message: string; type: "success" | "info" } | null) => {
+  const [toast, setToastState] = useState<{ message: string; type: "success" | "info" | "error" } | null>(null);
+  const setToast = (t: { message: string; type: "success" | "info" | "error" } | null) => {
     setToastState(t);
     if (t) {
       setTimeout(() => setToastState(null), 4000);
@@ -209,7 +209,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     queryFn: async () => {
       const { data, error } = await supabase.from("orders").select("*");
       if (error) throw error;
-      return data || [];
+      return (data || []).map((o: any) => ({
+        ...o,
+        PO_number: o.po_number,
+      }));
     },
     enabled: isRealSupabase && !!user,
     staleTime: 60_000,
@@ -330,18 +333,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // React Query Mutations for live Supabase Tables
   const addOrderMutation = useMutation({
     mutationFn: async (order: Order) => {
-      const { error } = await supabase.from("orders").insert(order);
+      const dbOrder = {
+        order_id: order.order_id,
+        customer_name: order.customer_name,
+        po_number: order.PO_number,
+        tech_pack_ref: order.tech_pack_ref,
+        size_breakdown: order.size_breakdown,
+        status: order.status,
+        created_date: order.created_date,
+        current_stage: order.current_stage,
+        qty: order.qty,
+        notes: order.notes,
+      };
+      const { error } = await supabase.from("orders").insert(dbOrder);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setToast({ message: "Order created successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add order: ${error.message}`, type: "error" });
+    },
   });
 
   const updateOrderMutation = useMutation({
     mutationFn: async ({ id, fields }: { id: string; fields: Partial<Order> }) => {
-      const { error } = await supabase.from("orders").update(fields).eq("order_id", id);
+      const dbFields: any = { ...fields };
+      if (fields.PO_number !== undefined) {
+        dbFields.po_number = fields.PO_number;
+        delete dbFields.PO_number;
+      }
+      const { error } = await supabase.from("orders").update(dbFields).eq("order_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["orders"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+      setToast({ message: "Order updated successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update order: ${error.message}`, type: "error" });
+    },
   });
 
   const addMaterialMutation = useMutation({
@@ -349,7 +381,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("materials").insert(material);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["materials"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      setToast({ message: "Material added successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add material: ${error.message}`, type: "error" });
+    },
   });
 
   const updateMaterialInspectionMutation = useMutation({
@@ -360,7 +398,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         .eq("material_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["materials"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["materials"] });
+      setToast({ message: "Material inspection status updated!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update inspection: ${error.message}`, type: "error" });
+    },
   });
 
   const addCuttingRecordMutation = useMutation({
@@ -368,7 +412,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("cutting_records").insert(record);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cutting_records"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cutting_records"] });
+      setToast({ message: "Cutting record added successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add cutting record: ${error.message}`, type: "error" });
+    },
   });
 
   const updateCuttingRecordMutation = useMutation({
@@ -379,7 +429,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         .eq("cut_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cutting_records"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cutting_records"] });
+      setToast({ message: "Cutting record updated successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update cutting record: ${error.message}`, type: "error" });
+    },
   });
 
   const addSewingBundleMutation = useMutation({
@@ -387,7 +443,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("sewing_bundles").insert(bundle);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sewing_bundles"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sewing_bundles"] });
+      setToast({ message: "Sewing bundle added successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add sewing bundle: ${error.message}`, type: "error" });
+    },
   });
 
   const updateSewingBundleMutation = useMutation({
@@ -398,7 +460,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         .eq("bundle_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sewing_bundles"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sewing_bundles"] });
+      setToast({ message: "Sewing bundle updated successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update sewing bundle: ${error.message}`, type: "error" });
+    },
   });
 
   const addWashBatchMutation = useMutation({
@@ -406,7 +474,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("wash_batches").insert(batch);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wash_batches"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wash_batches"] });
+      setToast({ message: "Wash batch registered successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to register wash batch: ${error.message}`, type: "error" });
+    },
   });
 
   const updateWashBatchMutation = useMutation({
@@ -417,7 +491,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         .eq("batch_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["wash_batches"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wash_batches"] });
+      setToast({ message: "Wash batch updated successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update wash batch: ${error.message}`, type: "error" });
+    },
   });
 
   const addQCRecordMutation = useMutation({
@@ -425,7 +505,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("qc_records").insert(record);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["qc_records"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["qc_records"] });
+      setToast({ message: "QC audit record submitted successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to submit QC record: ${error.message}`, type: "error" });
+    },
   });
 
   const addCartonMutation = useMutation({
@@ -433,7 +519,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("cartons").insert(carton);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cartons"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cartons"] });
+      setToast({ message: "Carton packed successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add carton: ${error.message}`, type: "error" });
+    },
   });
 
   const updateCartonDispatchMutation = useMutation({
@@ -444,7 +536,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         .eq("carton_id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["cartons"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["cartons"] });
+      setToast({ message: "Carton dispatch status updated!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to dispatch carton: ${error.message}`, type: "error" });
+    },
   });
 
   const addCustomerMutation = useMutation({
@@ -452,7 +550,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("customers").insert(customer);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setToast({ message: "Customer profile registered!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to add customer: ${error.message}`, type: "error" });
+    },
   });
 
   const updateCustomerMutation = useMutation({
@@ -460,7 +564,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.from("customers").update(fields).eq("id", id);
       if (error) throw error;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["customers"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
+      setToast({ message: "Customer profile updated successfully!", type: "success" });
+    },
+    onError: (error: any) => {
+      setToast({ message: `Failed to update customer: ${error.message}`, type: "error" });
+    },
   });
 
   const addNotificationMutation = useMutation({
@@ -477,6 +587,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+    onError: (error: any) => {
+      setToast({ message: `Failed to read notification: ${error.message}`, type: "error" });
+    },
   });
 
   /**
@@ -637,12 +750,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, materials, qc, cartons]);
 
-  // Realtime subscription for notifications from Supabase
+  // Realtime subscription for notifications and database updates from Supabase
   useEffect(() => {
     if (!isRealSupabase || !user) return;
 
     const channel = supabase
-      .channel("notifications-realtime")
+      .channel("db-realtime")
       .on(
         "postgres_changes",
         {
@@ -652,6 +765,39 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["notifications", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["orders", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "qc_records",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["qc_records", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cartons",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["cartons", user.id] });
         }
       )
       .subscribe();

@@ -125,7 +125,7 @@ function Page() {
   }, [sewing, orders, q]);
 
   // Loading skeleton state
-  if (isLoading) {
+  if (sewing.length === 0 && isLoading) {
     return (
       <AppShell>
         <div className="relative min-h-[400px] flex flex-col justify-start">
