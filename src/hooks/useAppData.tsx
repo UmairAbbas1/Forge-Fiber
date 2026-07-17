@@ -318,16 +318,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     retry: 1,
   });
 
-  // Decide current active lists based on environment
-  const orders = isRealSupabase ? dbOrders : localOrders;
-  const materials = isRealSupabase ? dbMaterials : localMaterials;
-  const cutting = isRealSupabase ? dbCutting : localCutting;
-  const sewing = isRealSupabase ? dbSewing : localSewing;
-  const wash = isRealSupabase ? dbWash : localWash;
-  const qc = isRealSupabase ? dbQc : localQc;
-  const cartons = isRealSupabase ? dbCartons : localCartons;
-  const customers = isRealSupabase ? dbCustomers : localCustomers;
-  const notifications = isRealSupabase ? dbNotifications : localNotifications;
+  // Decide current active lists based on environment (fallback to local if db is empty/unfetched, especially for unauthenticated pages like signup)
+  const orders = isRealSupabase && dbOrders.length > 0 ? dbOrders : localOrders;
+  const materials = isRealSupabase && dbMaterials.length > 0 ? dbMaterials : localMaterials;
+  const cutting = isRealSupabase && dbCutting.length > 0 ? dbCutting : localCutting;
+  const sewing = isRealSupabase && dbSewing.length > 0 ? dbSewing : localSewing;
+  const wash = isRealSupabase && dbWash.length > 0 ? dbWash : localWash;
+  const qc = isRealSupabase && dbQc.length > 0 ? dbQc : localQc;
+  const cartons = isRealSupabase && dbCartons.length > 0 ? dbCartons : localCartons;
+  const customers = isRealSupabase && dbCustomers.length > 0 ? dbCustomers : localCustomers;
+  const notifications = isRealSupabase && dbNotifications.length > 0 ? dbNotifications : localNotifications;
 
   // Equipment & Checkpoints managed locally for ease of preview in both modes
   const equipment = localEquipment;
