@@ -27,6 +27,7 @@ import {
   Compass
 } from "lucide-react";
 import { AppShell, SectionCard } from "../components/AppShell";
+import { LoadingOverlay } from "../components/ui/LoadingOverlay";
 import { STAGES } from "../lib/mockData";
 import { useAppData, checkStageAdvancement } from "../hooks/useAppData";
 import { useAuth } from "../hooks/useAuth";
@@ -153,16 +154,25 @@ function Page() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 w-48 bg-muted rounded-md" />
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
+        <div className="relative min-h-[400px] flex flex-col justify-start">
+          {/* Skeleton Layout */}
+          <div className="space-y-6 animate-pulse opacity-45 filter blur-[1px] select-none pointer-events-none">
+            <div className="h-8 w-48 bg-muted rounded-md" />
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+            </div>
+            <div className="h-64 bg-muted rounded-xl" />
+            <div className="h-32 bg-muted rounded-xl" />
           </div>
-          <div className="h-64 bg-muted rounded-xl" />
-          <div className="h-32 bg-muted rounded-xl" />
+          
+          {/* Premium Loading Overlay */}
+          <LoadingOverlay 
+            message="Loading Production Flow..." 
+            description="Syncing real-time orders, material statuses, and workshop metrics."
+          />
         </div>
       </AppShell>
     );

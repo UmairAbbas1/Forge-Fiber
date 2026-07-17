@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, KpiTile, SectionCard, StatusBadge, ProgressBar } from "../components/AppShell";
+import { LoadingOverlay } from "../components/ui/LoadingOverlay";
 import { useAppData } from "../hooks/useAppData";
 import { useAuth } from "../hooks/useAuth";
 import { Truck, PackageCheck, Send, CheckCircle, Search, ClipboardList, Plus, X } from "lucide-react";
@@ -100,19 +101,29 @@ function Page() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 w-48 bg-muted rounded-md" />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
+        <div className="relative min-h-[400px] flex flex-col justify-start">
+          {/* Skeleton Layout */}
+          <div className="space-y-6 animate-pulse opacity-45 filter blur-[1px] select-none pointer-events-none">
+            <div className="h-8 w-48 bg-muted rounded-md" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+            </div>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="h-32 bg-muted rounded-xl" />
+              <div className="h-32 bg-muted rounded-xl" />
+            </div>
+            <div className="h-64 bg-muted rounded-xl" />
           </div>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="h-32 bg-muted rounded-xl" />
-            <div className="h-32 bg-muted rounded-xl" />
-          </div>
-          <div className="h-64 bg-muted rounded-xl" />
+
+          {/* Premium Loading Overlay */}
+          <LoadingOverlay 
+            message="Loading Packing & Dispatch..." 
+            description="Syncing packed cartons, POD documents, carrier assignments, and shipping statuses."
+            icon={Truck}
+          />
         </div>
       </AppShell>
     );

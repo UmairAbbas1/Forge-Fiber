@@ -1,9 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState, useMemo } from "react";
 import { AppShell, KpiTile, SectionCard, StatusBadge } from "../components/AppShell";
+import { LoadingOverlay } from "../components/ui/LoadingOverlay";
 import { useAppData } from "../hooks/useAppData";
 import { useAuth } from "../hooks/useAuth";
-import { X, Search, Plus } from "lucide-react";
+import { X, Search, Plus, PackageOpen } from "lucide-react";
 
 export const Route = createFileRoute("/materials")({
   head: () => ({
@@ -96,15 +97,25 @@ function Page() {
   if (isLoading) {
     return (
       <AppShell>
-        <div className="space-y-6 animate-pulse">
-          <div className="h-8 w-48 bg-muted rounded-md" />
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
-            <div className="h-24 bg-muted rounded-xl" />
+        <div className="relative min-h-[400px] flex flex-col justify-start">
+          {/* Skeleton Layout */}
+          <div className="space-y-6 animate-pulse opacity-45 filter blur-[1px] select-none pointer-events-none">
+            <div className="h-8 w-48 bg-muted rounded-md" />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+              <div className="h-24 bg-muted rounded-xl" />
+            </div>
+            <div className="h-32 bg-muted rounded-xl" />
+            <div className="h-64 bg-muted rounded-xl" />
           </div>
-          <div className="h-32 bg-muted rounded-xl" />
-          <div className="h-64 bg-muted rounded-xl" />
+
+          {/* Premium Loading Overlay */}
+          <LoadingOverlay 
+            message="Loading Materials..." 
+            description="Syncing raw fabric inventory, trims, accessories, and inspection reports."
+            icon={PackageOpen}
+          />
         </div>
       </AppShell>
     );
