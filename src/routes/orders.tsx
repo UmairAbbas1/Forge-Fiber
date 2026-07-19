@@ -39,15 +39,8 @@ function Page() {
   const [newQty, setNewQty] = useState(1000);
   const [addFormError, setAddFormError] = useState("");
 
-  // Add-new-brand inline state (for Add modal)
-  const [showAddBrandAdd, setShowAddBrandAdd] = useState(false);
-  const [newBrandNameAdd, setNewBrandNameAdd] = useState("");
-  const addBrandInputRef = useRef<HTMLInputElement>(null);
-
-  // Add-new-brand inline state (for Edit modal)
-  const [showAddBrandEdit, setShowAddBrandEdit] = useState(false);
-  const [newBrandNameEdit, setNewBrandNameEdit] = useState("");
-  const editBrandInputRef = useRef<HTMLInputElement>(null);
+  // Edit Order State
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   // Edit Order State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -98,32 +91,50 @@ function Page() {
 
   const canEdit = user && ["admin", "merchandiser"].includes(user.role);
 
-  // Derive the first customer name whenever customers list changes
-  const firstCustomerName = customers[0]?.name ?? "";
-
-  // Sync newCustomer to first customer when modal opens or customers changes
+  // Sync states when Add Modal opens
   useEffect(() => {
-    if (showAddModal && !newCustomer && firstCustomerName) {
-      setNewCustomer(firstCustomerName);
-    }
-  }, [showAddModal, firstCustomerName]);
+    if (showAddModal) {
+      if (!newCustomer) {
+        setNewCustomer(user?.customer_name || "");
+      }
+      
+      let maxPoMatch: RegExpMatchArray | null = null;
+      let maxPoNum = -1;
+      let maxTpMatch: RegExpMatchArray | null = null;
+      let maxTpNum = -1;
 
-  const handleAddBrand = (
-    brandName: string,
-    setSelectedFn: (name: string) => void,
-    setShowFn: (v: boolean) => void,
-    setNameFn: (v: string) => void
-  ) => {
-    const trimmed = brandName.trim();
-    if (!trimmed) return;
-    // Avoid duplicates
-    if (!customers.find((c) => c.name.toLowerCase() === trimmed.toLowerCase())) {
-      addCustomer(trimmed, "");
+      for (const o of orders) {
+        const pMatch = o.PO_number.match(/^(.*?)(\d+)$/);
+        if (pMatch) {
+          const num = parseInt(pMatch[2], 10);
+          if (num > maxPoNum) {
+            maxPoNum = num;
+            maxPoMatch = pMatch;
+          }
+        }
+        const tMatch = o.tech_pack_ref.match(/^(.*?)(\d+)$/);
+        if (tMatch) {
+          const num = parseInt(tMatch[2], 10);
+          if (num > maxTpNum) {
+            maxTpNum = num;
+            maxTpMatch = tMatch;
+          }
+        }
+      }
+
+      if (maxPoMatch) {
+        setNewPO(`${maxPoMatch[1]}${maxPoNum + 1}`);
+      } else {
+        setNewPO("");
+      }
+
+      if (maxTpMatch) {
+        setNewTechPack(`${maxTpMatch[1]}${maxTpNum + 1}`);
+      } else {
+        setNewTechPack("");
+      }
     }
-    setSelectedFn(trimmed);
-    setShowFn(false);
-    setNameFn("");
-  };
+  }, [showAddModal, orders, user?.customer_name, newCustomer]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,13 +173,9 @@ function Page() {
     });
 
     // Reset fields
-    setNewPO("");
-    setNewTechPack("");
-    setNewCustomer(firstCustomerName);
+    setNewCustomer("");
     setNewSizes(SIZES[0]);
     setNewQty(1000);
-    setShowAddBrandAdd(false);
-    setNewBrandNameAdd("");
     setAddFormError("");
     setShowAddModal(false);
   };
@@ -394,57 +401,14 @@ function Page() {
             <form onSubmit={handleAddSubmit} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Customer Company</label>
-                <select
-                  value={showAddBrandAdd ? ADD_NEW_BRAND_SENTINEL : newCustomer}
-                  onChange={(e) => {
-                    if (e.target.value === ADD_NEW_BRAND_SENTINEL) {
-                      setShowAddBrandAdd(true);
-                      setNewBrandNameAdd("");
-                      setTimeout(() => addBrandInputRef.current?.focus(), 50);
-                    } else {
-                      setShowAddBrandAdd(false);
-                      setNewCustomer(e.target.value);
-                    }
-                  }}
+                <input
+                  type="text"
+                  value={newCustomer}
+                  onChange={(e) => setNewCustomer(e.target.value)}
+                  placeholder="Enter company name"
                   className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
-                >
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                  <option value={ADD_NEW_BRAND_SENTINEL} className="text-secondary font-semibold">＋ Add New Brand…</option>
-                </select>
-                {showAddBrandAdd && (
-                  <div className="flex gap-2 mt-2 animate-fade-in">
-                    <input
-                      ref={addBrandInputRef}
-                      value={newBrandNameAdd}
-                      onChange={(e) => setNewBrandNameAdd(e.target.value)}
-                      placeholder="Enter brand name"
-                      className="flex-1 px-3 h-9 rounded-lg border border-secondary text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddBrand(newBrandNameAdd, setNewCustomer, setShowAddBrandAdd, setNewBrandNameAdd);
-                        }
-                        if (e.key === "Escape") { setShowAddBrandAdd(false); setNewBrandNameAdd(""); }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleAddBrand(newBrandNameAdd, setNewCustomer, setShowAddBrandAdd, setNewBrandNameAdd)}
-                      className="px-3 h-9 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-primary transition-all flex items-center gap-1"
-                    >
-                      <Check className="h-4 w-4" /> Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddBrandAdd(false); setNewBrandNameAdd(""); }}
-                      className="px-2 h-9 rounded-lg border border-outline-variant text-muted-foreground hover:text-foreground hover:bg-accent"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -530,57 +494,14 @@ function Page() {
             <form onSubmit={handleUpdateSubmit} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[11px] font-semibold uppercase tracking-wider text-primary">Customer Company</label>
-                <select
-                  value={showAddBrandEdit ? ADD_NEW_BRAND_SENTINEL : editCustomer}
-                  onChange={(e) => {
-                    if (e.target.value === ADD_NEW_BRAND_SENTINEL) {
-                      setShowAddBrandEdit(true);
-                      setNewBrandNameEdit("");
-                      setTimeout(() => editBrandInputRef.current?.focus(), 50);
-                    } else {
-                      setShowAddBrandEdit(false);
-                      setEditCustomer(e.target.value);
-                    }
-                  }}
+                <input
+                  type="text"
+                  value={editCustomer}
+                  onChange={(e) => setEditCustomer(e.target.value)}
+                  placeholder="Enter company name"
                   className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
-                >
-                  {customers.map((c) => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                  <option value={ADD_NEW_BRAND_SENTINEL} className="text-secondary font-semibold">＋ Add New Brand…</option>
-                </select>
-                {showAddBrandEdit && (
-                  <div className="flex gap-2 mt-2 animate-fade-in">
-                    <input
-                      ref={editBrandInputRef}
-                      value={newBrandNameEdit}
-                      onChange={(e) => setNewBrandNameEdit(e.target.value)}
-                      placeholder="Enter brand name"
-                      className="flex-1 px-3 h-9 rounded-lg border border-secondary text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          handleAddBrand(newBrandNameEdit, setEditCustomer, setShowAddBrandEdit, setNewBrandNameEdit);
-                        }
-                        if (e.key === "Escape") { setShowAddBrandEdit(false); setNewBrandNameEdit(""); }
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleAddBrand(newBrandNameEdit, setEditCustomer, setShowAddBrandEdit, setNewBrandNameEdit)}
-                      className="px-3 h-9 rounded-lg bg-secondary text-white text-sm font-semibold hover:bg-primary transition-all flex items-center gap-1"
-                    >
-                      <Check className="h-4 w-4" /> Save
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => { setShowAddBrandEdit(false); setNewBrandNameEdit(""); }}
-                      className="px-2 h-9 rounded-lg border border-outline-variant text-muted-foreground hover:text-foreground hover:bg-accent"
-                    >
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                )}
+                  required
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

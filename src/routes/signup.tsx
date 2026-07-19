@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { useAppData } from "../hooks/useAppData";
 import { KeyRound, Mail, ArrowRight, UserPlus, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/signup")({
@@ -18,22 +17,14 @@ export const Route = createFileRoute("/signup")({
 function SignupPage() {
   const navigate = useNavigate();
   const { signUp, user } = useAuth();
-  const { customers } = useAppData();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState<"admin" | "merchandiser" | "production" | "qc" | "customer">("customer");
-  const [customerName, setCustomerName] = useState(customers[0]?.name ?? "");
+  const [customerName, setCustomerName] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
-  // Ensure default customer is selected once loaded
-  useEffect(() => {
-    if (!customerName && customers.length > 0) {
-      setCustomerName(customers[0].name);
-    }
-  }, [customers, customerName]);
 
   // If already logged in, redirect to dashboard
   if (user) {
@@ -57,6 +48,10 @@ function SignupPage() {
     }
     if (password !== confirmPassword) {
       setErrorMsg("Passwords do not match. Please re-enter to confirm.");
+      return;
+    }
+    if (role === "customer" && !customerName.trim()) {
+      setErrorMsg("Please enter your company name.");
       return;
     }
 
@@ -181,16 +176,15 @@ function SignupPage() {
               <label className="text-xs font-semibold text-primary uppercase tracking-wider block mb-1">
                 Associate Customer Company
               </label>
-              <select
+              <input
+                type="text"
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Enter your company name"
                 className="w-full px-3 h-10 rounded-lg border border-outline-variant bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/50"
                 disabled={submitting}
-              >
-                {customers.map((c) => (
-                  <option key={c.id} value={c.name} className="text-slate-900 bg-white">{c.name}</option>
-                ))}
-              </select>
+                required
+              />
               <p className="text-[10px] text-muted-foreground mt-1.5 leading-tight">
                 All newly registered accounts are set to a Customer role by default. Internal staff roles must be granted by an administrator.
               </p>
