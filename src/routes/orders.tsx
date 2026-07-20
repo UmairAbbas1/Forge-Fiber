@@ -98,15 +98,50 @@ function Page() {
 
   const canEdit = user && ["admin", "merchandiser"].includes(user.role);
 
-  // Derive the first customer name whenever customers list changes
-  const firstCustomerName = customers[0]?.name ?? "";
-
-  // Sync newCustomer to first customer when modal opens or customers changes
+  // Sync states when Add Modal opens
   useEffect(() => {
-    if (showAddModal && !newCustomer && firstCustomerName) {
-      setNewCustomer(firstCustomerName);
+    if (showAddModal) {
+      if (!newCustomer) {
+        setNewCustomer(user?.customer_name || "");
+      }
+      
+      let maxPoMatch: RegExpMatchArray | null = null;
+      let maxPoNum = -1;
+      let maxTpMatch: RegExpMatchArray | null = null;
+      let maxTpNum = -1;
+
+      for (const o of orders) {
+        const pMatch = o.PO_number.match(/^(.*?)(\d+)$/);
+        if (pMatch) {
+          const num = parseInt(pMatch[2], 10);
+          if (num > maxPoNum) {
+            maxPoNum = num;
+            maxPoMatch = pMatch;
+          }
+        }
+        const tMatch = o.tech_pack_ref.match(/^(.*?)(\d+)$/);
+        if (tMatch) {
+          const num = parseInt(tMatch[2], 10);
+          if (num > maxTpNum) {
+            maxTpNum = num;
+            maxTpMatch = tMatch;
+          }
+        }
+      }
+
+      if (maxPoMatch) {
+        setNewPO(`${maxPoMatch[1]}${maxPoNum + 1}`);
+      } else {
+        setNewPO("");
+      }
+
+      if (maxTpMatch) {
+        setNewTechPack(`${maxTpMatch[1]}${maxTpNum + 1}`);
+      } else {
+        setNewTechPack("");
+      }
     }
-  }, [showAddModal, firstCustomerName]);
+  }, [showAddModal, orders, user?.customer_name, newCustomer]);
 
   const handleAddBrand = (
     brandName: string,
@@ -162,9 +197,7 @@ function Page() {
     });
 
     // Reset fields
-    setNewPO("");
-    setNewTechPack("");
-    setNewCustomer(firstCustomerName);
+    setNewCustomer("");
     setNewSizes(SIZES[0]);
     setNewQty(1000);
     setShowAddBrandAdd(false);
