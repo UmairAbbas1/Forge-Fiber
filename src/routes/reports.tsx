@@ -83,11 +83,11 @@ function Page() {
     return Object.values(dataMap).map((day) => {
       const qcPassRate = day.inspectSum > 0 
         ? Math.round((day.passSum / day.inspectSum) * 100) 
-        : 97 + Math.round(Math.random() * 3); // realistic default fallback
+        : 0; // Flat 0 line for zero data
 
       const otdRate = day.shipCount > 0 
         ? Math.round((day.otdSum / day.shipCount) * 100) 
-        : 94 + Math.round(Math.random() * 4); // realistic default fallback
+        : 0; // Flat 0 line for zero data
 
       return {
         date: day.date.slice(5), // Short date (MM-DD)
@@ -135,15 +135,15 @@ function Page() {
     });
 
     return Object.values(checkpointsMap).map((cp) => {
-      const total = cp.inspected || 1200; // seed fallback
-      const pass = cp.pass || Math.round(total * 0.97);
-      const reject = cp.reject || (total - pass);
+      const total = cp.inspected;
+      const pass = cp.pass;
+      const reject = cp.reject;
       return {
         Checkpoint: cp.checkpoint,
         "Inspected Qty": total,
         "Pass Qty": pass,
         "Reject Qty": reject,
-        "Pass Rate %": Math.round((pass / total) * 100),
+        "Pass Rate %": total > 0 ? Math.round((pass / total) * 100) : 0,
       };
     });
   }, [filteredQc]);
@@ -313,7 +313,7 @@ function Page() {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-                  <YAxis domain={[80, 100]} tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", fontSize: 11 }} />
                   <Line type="monotone" dataKey="QC Pass Rate %" stroke="var(--success)" strokeWidth={2} activeDot={{ r: 6 }} />
                 </LineChart>
@@ -327,7 +327,7 @@ function Page() {
                 <LineChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                   <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
-                  <YAxis domain={[80, 100]} tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10 }} stroke="var(--muted-foreground)" />
                   <Tooltip contentStyle={{ background: "var(--card)", border: "1px solid var(--border)", fontSize: 11 }} />
                   <Line type="monotone" dataKey="On-Time Delivery %" stroke="var(--navy)" strokeWidth={2} activeDot={{ r: 6 }} />
                 </LineChart>
