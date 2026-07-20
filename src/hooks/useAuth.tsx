@@ -204,7 +204,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       }
 
-      const { error } = await supabase.auth.signUp({
+      const { data: authData, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -216,6 +216,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         },
       });
       if (error) return { error };
+
+      if (authData.user) {
+        await supabase.from("profiles").upsert({
+          id: authData.user.id,
+          email,
+          role,
+          customer_name: customerName,
+          customer_id: customerId,
+        });
+      }
       return { error: null };
     } else {
       const profiles = getMockProfiles();

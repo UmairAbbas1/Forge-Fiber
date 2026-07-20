@@ -361,13 +361,56 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const scopedOrders = useMemo(() => {
     if (user?.role === "customer") {
       const custName = user.customer_name?.trim().toLowerCase();
-      if (!custName) return [];
-      return orders.filter(
-        (o) => o.customer_name?.trim().toLowerCase() === custName
-      );
+      const custId = (user as any).customer_id;
+      const userEmail = user.email?.trim().toLowerCase();
+
+      // Find all customer company names associated with this user
+      const userCompanyNames = new Set<string>();
+      if (custName) userCompanyNames.add(custName);
+
+      if (userEmail && customers.length > 0) {
+        customers.forEach((c) => {
+          if (
+            (c.contact && c.contact.trim().toLowerCase() === userEmail) ||
+            (c.id && custId && c.id === custId)
+          ) {
+            userCompanyNames.add(c.name.trim().toLowerCase());
+          }
+        });
+      }
+
+      // If user has no explicit company name set on profile or customers list,
+      // fallback to fuzzy matching user email prefix (e.g. "happyca" matches "HappyAI")
+      if (userCompanyNames.size === 0 && userEmail) {
+        const emailPrefix = userEmail.split("@")[0].toLowerCase();
+        customers.forEach((c) => {
+          const cNameLow = c.name.toLowerCase();
+          if (cNameLow.includes(emailPrefix) || emailPrefix.includes(cNameLow.slice(0, 4))) {
+            userCompanyNames.add(cNameLow);
+          }
+        });
+      }
+
+      // If still no company name found and there is only 1 customer registered, use that customer company
+      if (userCompanyNames.size === 0 && customers.length === 1) {
+        userCompanyNames.add(customers[0].name.trim().toLowerCase());
+      }
+
+      return orders.filter((o) => {
+        // 1. Direct customer_id match
+        if (custId && o.customer_id && o.customer_id === custId) {
+          return true;
+        }
+        // 2. Matching any associated company name
+        const oNameLow = o.customer_name?.trim().toLowerCase();
+        if (oNameLow && userCompanyNames.has(oNameLow)) {
+          return true;
+        }
+        return false;
+      });
     }
     return orders;
-  }, [user, orders]);
+  }, [user, orders, customers]);
 
   const scopedOrderIds = useMemo(() => {
     return new Set(scopedOrders.map((o) => o.order_id));
@@ -439,6 +482,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const dbOrder = {
         order_id: order.order_id,
         customer_name: order.customer_name,
+        customer_id: order.customer_id,
         po_number: order.PO_number,
         tech_pack_ref: order.tech_pack_ref,
         size_breakdown: order.size_breakdown,
@@ -662,7 +706,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         name: customer.name,
         contact: customer.contact,
       };
-      const { error } = await supabase.from("customers").insert(dbCustomer);
+      const { error } = await supabase.from("customers").upsert(dbCustomer, { onConflict: "name" });
       if (error) throw error;
     },
     onSuccess: () => {
@@ -913,6 +957,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         },
         () => {
           queryClient.invalidateQueries({ queryKey: ["cartons", user.id] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "customers",
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["customers", user.id] });
+          queryClient.invalidateQueries({ queryKey: ["customers"] });
         }
       )
       .subscribe();
