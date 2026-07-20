@@ -8,7 +8,7 @@ import { AppShell, KpiTile, SectionCard, StatusBadge } from "../components/AppSh
 import { ORDER_TREND, type Order } from "../lib/mockData";
 import { useAppData } from "../hooks/useAppData";
 import { useAuth } from "../hooks/useAuth";
-import { Plus, X, Pencil, Info, PlusCircle, Check } from "lucide-react";
+import { Plus, X, Pencil, Info } from "lucide-react";
 
 export const Route = createFileRoute("/orders")({
   head: () => ({
@@ -20,7 +20,6 @@ export const Route = createFileRoute("/orders")({
   component: Page,
 });
 
-const ADD_NEW_BRAND_SENTINEL = "__ADD_NEW_BRAND__";
 const SIZES = ["28-38", "30-40", "S-XXL", "26-36", "XS-XL"];
 
 function Page() {
@@ -91,8 +90,8 @@ function Page() {
   // Sync states when Add Modal opens
   useEffect(() => {
     if (showAddModal) {
-      if (!newCustomer) {
-        setNewCustomer(user?.customer_name || "");
+      if (!newCustomer && customers.length > 0) {
+        setNewCustomer(user?.customer_name || customers[0].name);
       }
       
       let maxPoMatch: RegExpMatchArray | null = null;
@@ -131,12 +130,13 @@ function Page() {
         setNewTechPack("");
       }
     }
-  }, [showAddModal, orders, user?.customer_name, newCustomer]);
+  }, [showAddModal, orders, user?.customer_name, newCustomer, customers]);
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAddFormError("");
-    if (!newCustomer) {
+    const selectedCust = newCustomer || (customers.length > 0 ? customers[0].name : "");
+    if (!selectedCust) {
       setAddFormError("Please select a customer / brand.");
       return;
     }
@@ -158,9 +158,12 @@ function Page() {
       .filter((n) => !isNaN(n));
     const nextId = numericIds.length > 0 ? Math.max(...numericIds) + 1 : 2601;
     const newOrderId = `FF-${nextId}`;
+    const matchedCustomer = customers.find(c => c.name.toLowerCase() === selectedCust.toLowerCase());
+    
     addOrder({
       order_id: newOrderId,
-      customer_name: newCustomer,
+      customer_name: selectedCust,
+      customer_id: matchedCustomer?.id,
       PO_number: newPO,
       tech_pack_ref: newTechPack,
       size_breakdown: newSizes,
@@ -401,9 +404,10 @@ function Page() {
                 <select
                   value={newCustomer}
                   onChange={(e) => setNewCustomer(e.target.value)}
-                  className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
+                  className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary font-medium"
+                  required
                 >
-                  <option value="" disabled>Select a brand</option>
+                  <option value="" disabled>-- Select Registered Customer Company --</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}
@@ -496,8 +500,10 @@ function Page() {
                 <select
                   value={editCustomer}
                   onChange={(e) => setEditCustomer(e.target.value)}
-                  className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary"
+                  className="w-full px-3 h-10 rounded-lg border border-outline-variant text-sm focus:outline-none focus:ring-1 focus:ring-secondary font-medium"
+                  required
                 >
+                  <option value="" disabled>-- Select Registered Customer Company --</option>
                   {customers.map((c) => (
                     <option key={c.id} value={c.name}>{c.name}</option>
                   ))}

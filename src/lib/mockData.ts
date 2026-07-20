@@ -5,6 +5,7 @@ export type QCResult = "Pass" | "Rework" | "Reject";
 export interface Order {
   order_id: string;
   customer_name: string;
+  customer_id?: string;
   PO_number: string;
   tech_pack_ref: string;
   size_breakdown: string;
