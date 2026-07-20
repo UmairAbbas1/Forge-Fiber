@@ -10,23 +10,41 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WashRouteImport } from './routes/wash'
+import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SustainabilityRouteImport } from './routes/sustainability'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as SewingRouteImport } from './routes/sewing'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as QcRouteImport } from './routes/qc'
+import { Route as ProcessRouteImport } from './routes/process'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as OrdersRouteImport } from './routes/orders'
 import { Route as MaterialsRouteImport } from './routes/materials'
+import { Route as MachinesRouteImport } from './routes/machines'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as DispatchRouteImport } from './routes/dispatch'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CuttingRouteImport } from './routes/cutting'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as ComplianceRouteImport } from './routes/compliance'
+import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OrdersOrderIdRouteImport } from './routes/orders.$orderId'
 
 const WashRoute = WashRouteImport.update({
   id: '/wash',
   path: '/wash',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SustainabilityRoute = SustainabilityRouteImport.update({
+  id: '/sustainability',
+  path: '/sustainability',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -54,6 +72,16 @@ const QcRoute = QcRouteImport.update({
   path: '/qc',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProcessRoute = ProcessRouteImport.update({
+  id: '/process',
+  path: '/process',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OrdersRoute = OrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -62,6 +90,11 @@ const OrdersRoute = OrdersRouteImport.update({
 const MaterialsRoute = MaterialsRouteImport.update({
   id: '/materials',
   path: '/materials',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MachinesRoute = MachinesRouteImport.update({
+  id: '/machines',
+  path: '/machines',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -84,6 +117,21 @@ const CuttingRoute = CuttingRouteImport.update({
   path: '/cutting',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ContactRoute = ContactRouteImport.update({
+  id: '/contact',
+  path: '/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ComplianceRoute = ComplianceRouteImport.update({
+  id: '/compliance',
+  path: '/compliance',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AboutRoute = AboutRouteImport.update({
+  id: '/about',
+  path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -97,50 +145,74 @@ const OrdersOrderIdRoute = OrdersOrderIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/compliance': typeof ComplianceRoute
+  '/contact': typeof ContactRoute
   '/cutting': typeof CuttingRoute
   '/dashboard': typeof DashboardRoute
   '/dispatch': typeof DispatchRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
   '/materials': typeof MaterialsRoute
   '/orders': typeof OrdersRouteWithChildren
+  '/privacy': typeof PrivacyRoute
+  '/process': typeof ProcessRoute
   '/qc': typeof QcRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/sewing': typeof SewingRoute
   '/signup': typeof SignupRoute
+  '/sustainability': typeof SustainabilityRoute
+  '/terms': typeof TermsRoute
   '/wash': typeof WashRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/compliance': typeof ComplianceRoute
+  '/contact': typeof ContactRoute
   '/cutting': typeof CuttingRoute
   '/dashboard': typeof DashboardRoute
   '/dispatch': typeof DispatchRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
   '/materials': typeof MaterialsRoute
   '/orders': typeof OrdersRouteWithChildren
+  '/privacy': typeof PrivacyRoute
+  '/process': typeof ProcessRoute
   '/qc': typeof QcRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/sewing': typeof SewingRoute
   '/signup': typeof SignupRoute
+  '/sustainability': typeof SustainabilityRoute
+  '/terms': typeof TermsRoute
   '/wash': typeof WashRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/about': typeof AboutRoute
+  '/compliance': typeof ComplianceRoute
+  '/contact': typeof ContactRoute
   '/cutting': typeof CuttingRoute
   '/dashboard': typeof DashboardRoute
   '/dispatch': typeof DispatchRoute
   '/login': typeof LoginRoute
+  '/machines': typeof MachinesRoute
   '/materials': typeof MaterialsRoute
   '/orders': typeof OrdersRouteWithChildren
+  '/privacy': typeof PrivacyRoute
+  '/process': typeof ProcessRoute
   '/qc': typeof QcRoute
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/sewing': typeof SewingRoute
   '/signup': typeof SignupRoute
+  '/sustainability': typeof SustainabilityRoute
+  '/terms': typeof TermsRoute
   '/wash': typeof WashRoute
   '/orders/$orderId': typeof OrdersOrderIdRoute
 }
@@ -148,66 +220,98 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/about'
+    | '/compliance'
+    | '/contact'
     | '/cutting'
     | '/dashboard'
     | '/dispatch'
     | '/login'
+    | '/machines'
     | '/materials'
     | '/orders'
+    | '/privacy'
+    | '/process'
     | '/qc'
     | '/reports'
     | '/settings'
     | '/sewing'
     | '/signup'
+    | '/sustainability'
+    | '/terms'
     | '/wash'
     | '/orders/$orderId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/about'
+    | '/compliance'
+    | '/contact'
     | '/cutting'
     | '/dashboard'
     | '/dispatch'
     | '/login'
+    | '/machines'
     | '/materials'
     | '/orders'
+    | '/privacy'
+    | '/process'
     | '/qc'
     | '/reports'
     | '/settings'
     | '/sewing'
     | '/signup'
+    | '/sustainability'
+    | '/terms'
     | '/wash'
     | '/orders/$orderId'
   id:
     | '__root__'
     | '/'
+    | '/about'
+    | '/compliance'
+    | '/contact'
     | '/cutting'
     | '/dashboard'
     | '/dispatch'
     | '/login'
+    | '/machines'
     | '/materials'
     | '/orders'
+    | '/privacy'
+    | '/process'
     | '/qc'
     | '/reports'
     | '/settings'
     | '/sewing'
     | '/signup'
+    | '/sustainability'
+    | '/terms'
     | '/wash'
     | '/orders/$orderId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AboutRoute: typeof AboutRoute
+  ComplianceRoute: typeof ComplianceRoute
+  ContactRoute: typeof ContactRoute
   CuttingRoute: typeof CuttingRoute
   DashboardRoute: typeof DashboardRoute
   DispatchRoute: typeof DispatchRoute
   LoginRoute: typeof LoginRoute
+  MachinesRoute: typeof MachinesRoute
   MaterialsRoute: typeof MaterialsRoute
   OrdersRoute: typeof OrdersRouteWithChildren
+  PrivacyRoute: typeof PrivacyRoute
+  ProcessRoute: typeof ProcessRoute
   QcRoute: typeof QcRoute
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SewingRoute: typeof SewingRoute
   SignupRoute: typeof SignupRoute
+  SustainabilityRoute: typeof SustainabilityRoute
+  TermsRoute: typeof TermsRoute
   WashRoute: typeof WashRoute
 }
 
@@ -218,6 +322,20 @@ declare module '@tanstack/react-router' {
       path: '/wash'
       fullPath: '/wash'
       preLoaderRoute: typeof WashRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sustainability': {
+      id: '/sustainability'
+      path: '/sustainability'
+      fullPath: '/sustainability'
+      preLoaderRoute: typeof SustainabilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -255,6 +373,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof QcRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/process': {
+      id: '/process'
+      path: '/process'
+      fullPath: '/process'
+      preLoaderRoute: typeof ProcessRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/orders': {
       id: '/orders'
       path: '/orders'
@@ -267,6 +399,13 @@ declare module '@tanstack/react-router' {
       path: '/materials'
       fullPath: '/materials'
       preLoaderRoute: typeof MaterialsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/machines': {
+      id: '/machines'
+      path: '/machines'
+      fullPath: '/machines'
+      preLoaderRoute: typeof MachinesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -295,6 +434,27 @@ declare module '@tanstack/react-router' {
       path: '/cutting'
       fullPath: '/cutting'
       preLoaderRoute: typeof CuttingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/contact': {
+      id: '/contact'
+      path: '/contact'
+      fullPath: '/contact'
+      preLoaderRoute: typeof ContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/compliance': {
+      id: '/compliance'
+      path: '/compliance'
+      fullPath: '/compliance'
+      preLoaderRoute: typeof ComplianceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/about': {
+      id: '/about'
+      path: '/about'
+      fullPath: '/about'
+      preLoaderRoute: typeof AboutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -327,17 +487,25 @@ const OrdersRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AboutRoute: AboutRoute,
+  ComplianceRoute: ComplianceRoute,
+  ContactRoute: ContactRoute,
   CuttingRoute: CuttingRoute,
   DashboardRoute: DashboardRoute,
   DispatchRoute: DispatchRoute,
   LoginRoute: LoginRoute,
+  MachinesRoute: MachinesRoute,
   MaterialsRoute: MaterialsRoute,
   OrdersRoute: OrdersRouteWithChildren,
+  PrivacyRoute: PrivacyRoute,
+  ProcessRoute: ProcessRoute,
   QcRoute: QcRoute,
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SewingRoute: SewingRoute,
   SignupRoute: SignupRoute,
+  SustainabilityRoute: SustainabilityRoute,
+  TermsRoute: TermsRoute,
   WashRoute: WashRoute,
 }
 export const routeTree = rootRouteImport
