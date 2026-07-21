@@ -800,7 +800,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       delete dbNotif.id; // Let Postgres generate the UUID
       const { error } = await supabase
         .from("notifications")
-        .upsert(dbNotif, { onConflict: "type, order_id" });
+        .insert(dbNotif);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
@@ -1716,14 +1716,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   const advanceOrderStage = (orderId: string, toStage: number) => {
     updateOrder(orderId, { current_stage: toStage });
+    const stageName = STAGES.find(s => s.id === toStage)?.name || `Stage ${toStage}`;
     createRealtimeNotification(
-      `[STAGE] Order ${orderId} has advanced to Stage ${toStage}.`,
+      `[STAGE ADVANCED] Order ${orderId} has advanced to Stage ${toStage}: ${stageName}.`,
       orderId,
       "stage_advance",
       toStage
     );
     setToast({
-      message: `Order ${orderId} successfully advanced to Stage ${toStage}!`,
+      message: `Order ${orderId} successfully advanced to Stage ${toStage}: ${stageName}!`,
       type: "success"
     });
   };
