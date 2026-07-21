@@ -231,8 +231,13 @@ function Page() {
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <div className="text-[11px] uppercase tracking-widest text-muted-foreground">Operations</div>
-            <h1 className="mt-1 text-2xl md:text-3xl font-bold">Order Dashboard</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <div className="h-1.5 w-1.5 rounded-full bg-primary animate-pulse"></div>
+              <div className="text-xs md:text-sm uppercase tracking-[0.15em] text-primary font-bold">
+                {user?.role === "customer" && user?.customer_name ? user.customer_name : "Operations"}
+              </div>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-bold">Order Dashboard</h1>
           </div>
           {canEdit && (
             <button
