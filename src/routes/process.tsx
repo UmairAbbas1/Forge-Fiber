@@ -25,26 +25,27 @@ function ProcessPage() {
 
   return (
     <PublicLayout>
-      <section className="py-24 px-6 md:px-12 bg-surface">
+      <section className="py-24 px-6 md:px-12 bg-[#FAF8F5]">
         <div className="max-w-4xl mx-auto space-y-12">
           <div className="text-center space-y-4">
-            <h1 className="font-display-lg text-4xl md:text-5xl font-extrabold text-primary">The Thirteen-Stage Production Flow</h1>
-            <p className="font-body-lg text-lg text-on-surface-variant max-w-2xl mx-auto">
+            <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Detailed Pipeline</span>
+            <h1 className="font-display font-black text-4xl md:text-5xl text-neutral-950">The Thirteen-Stage Production Flow</h1>
+            <p className="text-neutral-600 text-base md:text-lg font-medium max-w-2xl mx-auto leading-relaxed">
               Our conversion model transforms your raw materials into finished, shipped garments through a highly disciplined input/output process.
             </p>
           </div>
 
-          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-outline-variant before:to-transparent">
+          <div className="space-y-6 relative before:absolute before:inset-0 before:ml-5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-amber-200 before:to-transparent">
             {stages.map((stage) => (
               <div key={stage.num} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
-                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-white bg-primary text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-md z-10">
+                <div className="flex items-center justify-center w-10 h-10 rounded-full border-4 border-[#FAF8F5] bg-amber-600 text-white font-bold shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow-md z-10 transition-transform group-hover:scale-110">
                   {stage.num}
                 </div>
-                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-xl border border-outline-variant/60 shadow-sm hover:shadow-md transition-shadow">
-                  <h3 className="font-headline-sm text-lg font-bold mb-2 flex items-center gap-2">
+                <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-white p-6 rounded-2xl border border-neutral-200/90 shadow-sm hover:shadow-xl hover:border-amber-600 transition-all cursor-pointer group/card">
+                  <h3 className="font-bold text-lg text-neutral-950 mb-2 group-hover/card:text-amber-700 transition-colors">
                     {stage.title}
                   </h3>
-                  <p className="font-body-sm text-sm text-on-surface-variant leading-relaxed">
+                  <p className="text-sm text-neutral-600 leading-relaxed font-medium">
                     {stage.desc}
                   </p>
                 </div>

@@ -188,25 +188,25 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           scrolled ? "shadow-md py-3" : "py-4"
         }`}
       >
-        <div className="flex justify-between items-center px-4 md:px-12 max-w-7xl mx-auto">
-          <div className="flex items-center gap-6">
+        <div className="flex justify-between items-center px-4 lg:px-6 xl:px-12 max-w-7xl mx-auto gap-4">
+          <div className="flex items-center gap-4 xl:gap-6 shrink-0">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-1.5 text-neutral-700 hover:text-black"
+              className="lg:hidden p-1.5 text-neutral-700 hover:text-black"
             >
               {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>
 
-            <Link to="/" className="flex items-center gap-3 py-1 group">
-              <img src="/SVG_MARK.svg" alt="Forge & Fabric Logo" className="h-11 w-auto md:h-13 object-contain group-hover:scale-105 transition-transform" />
-              <span className="font-display text-2xl md:text-3xl font-black tracking-tight text-neutral-950">
+            <Link to="/" className="flex items-center gap-3 py-1 group shrink-0">
+              <img src="/SVG_MARK.svg" alt="Forge & Fabric Logo" className="h-10 w-auto md:h-12 object-contain group-hover:scale-105 transition-transform" />
+              <span className="font-display text-xl md:text-2xl lg:text-3xl font-black tracking-tight text-neutral-950 whitespace-nowrap">
                 FORGE<span className="text-amber-600 font-serif italic font-normal">&amp;</span>FABRIC
               </span>
             </Link>
           </div>
 
           {/* Interactive Navigation Mega Menus */}
-          <div className="hidden lg:flex items-center gap-8 text-sm font-semibold text-neutral-800">
+          <div className="hidden lg:flex flex-1 justify-center items-center gap-4 xl:gap-8 text-sm font-semibold text-neutral-800 whitespace-nowrap">
             
             <div 
               onMouseEnter={() => setActiveMegaMenu("dyeable")}
@@ -314,10 +314,10 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
 
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <button
               onClick={() => setShowContactModal(true)}
-              className="hidden sm:flex items-center gap-2 bg-neutral-950 text-white hover:bg-amber-600 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer"
+              className="hidden sm:flex items-center gap-2 bg-neutral-950 text-white hover:bg-amber-600 px-4 xl:px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-sm cursor-pointer whitespace-nowrap"
             >
               <span>Contact</span>
               <Phone className="w-3.5 h-3.5" />
@@ -325,7 +325,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             
             <Link
               to="/dashboard"
-              className="bg-amber-600 text-white hover:bg-neutral-950 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
+              className="bg-amber-600 text-white hover:bg-neutral-950 px-4 xl:px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-sm whitespace-nowrap"
             >
               Sign In
             </Link>
