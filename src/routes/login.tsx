@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
-import { KeyRound, Mail, ArrowRight, UserCheck, AlertTriangle } from "lucide-react";
+import { KeyRound, Mail, ArrowRight, UserCheck, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -119,10 +119,22 @@ function LoginPage() {
     <div className="min-h-screen bg-surface flex flex-col md:flex-row items-stretch justify-center industrial-grid p-4 md:p-0">
 
       {/* Side Brand panel - Large Centered Logo with Bold Terracotta Separation Line */}
-      <div className="hidden lg:flex lg:w-5/12 bg-white p-8 items-center justify-center relative overflow-hidden border-r-[10px] border-primary">
+      <div className="hidden lg:flex lg:w-5/12 h-screen sticky top-0 bg-white p-8 items-center justify-center flex-col relative overflow-hidden border-r-[10px] border-primary z-20">
         <div className="absolute inset-0 opacity-5 industrial-grid pointer-events-none"></div>
-        <Link to="/" className="z-10 transform hover:scale-105 transition-all duration-300">
-          <img src="/favicon.png" alt="Forge & Fabric Logo" className="w-72 h-72 md:w-96 md:h-96 object-contain" />
+
+        {/* Back to Home Button */}
+        <Link
+          to="/"
+          className="absolute top-8 left-8 z-20 flex items-center gap-2 text-xs font-bold text-neutral-700 hover:text-amber-700 bg-neutral-100 hover:bg-amber-50 px-4 py-2 rounded-full border border-neutral-200 transition-all shadow-sm group"
+          title="Return to Home Landing Page"
+        >
+          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          <span>Back to Home</span>
+        </Link>
+
+        {/* Center Logo */}
+        <Link to="/" className="z-10 flex flex-col items-center justify-center transform hover:scale-105 transition-all duration-300">
+          <img src="/favicon.png" alt="Forge & Fabric Logo" className="w-80 h-80 md:w-[380px] md:h-[380px] object-contain drop-shadow-md" />
         </Link>
       </div>
 
