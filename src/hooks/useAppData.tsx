@@ -768,7 +768,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         name: customer.name,
         contact: customer.contact,
       };
-      const { error } = await supabase.from("customers").upsert(dbCustomer, { onConflict: "name" });
+      const { error } = await supabase.from("customers").insert(dbCustomer);
+      if (error && (error.message.includes("duplicate") || error.code === "23505")) {
+        return; // Customer company already exists in DB
+      }
       if (error) throw error;
     },
     onSuccess: () => {
@@ -798,15 +801,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     mutationFn: async (notif: Notification) => {
       const dbNotif: any = { ...notif };
       delete dbNotif.id; // Let Postgres generate the UUID
-      const { error } = await supabase
-        .from("notifications")
-        .upsert(dbNotif, { onConflict: "type, order_id" });
+      const { error } = await supabase.from("notifications").insert(dbNotif);
+      if (error && (error.message.includes("duplicate") || error.code === "23505")) {
+        return; // Notification already exists
+      }
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
     onError: (error: any) => {
       console.error("Failed to insert notification:", error);
-      setToast({ message: `Notification Error: ${error.message || "Unique constraint violation"}`, type: "error" });
     },
   });
 
