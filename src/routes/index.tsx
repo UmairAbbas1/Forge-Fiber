@@ -1,4 +1,5 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ArrowRight,
   ShieldCheck,
@@ -12,7 +13,11 @@ import {
   Award,
   Clock,
   Layers,
-  ChevronRight
+  ChevronRight,
+  X,
+  CheckCircle2,
+  Cpu,
+  Boxes
 } from "lucide-react";
 import { PublicLayout } from "../components/PublicLayout";
 
@@ -28,12 +33,67 @@ export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
+interface StageModalData {
+  num: string;
+  title: string;
+  desc: string;
+  equipment: string;
+  leadTime: string;
+  output: string;
+}
+
 function LandingPage() {
+  const navigate = useNavigate();
+  const [selectedStageModal, setSelectedStageModal] = useState<StageModalData | null>(null);
+
+  const stageDetails: StageModalData[] = [
+    {
+      num: "01",
+      title: "Material Intake & Roll Inspection",
+      desc: "Customer-supplied fabric rolls and trims logged, 4-point fabric inspection conducted, and shade lot matching completed.",
+      equipment: "Automated Roll Inspection Frame & Color Matching Lightbox",
+      leadTime: "12 Hours",
+      output: "Approved Fabric Roll Inventory & Inspection Clearance Tag",
+    },
+    {
+      num: "02",
+      title: "Precision Spreading & Laser Cutting",
+      desc: "Computerized marker planning, vacuum tension spreading, and high precision laser cut panel generation.",
+      equipment: "Gerber Automatic Spreader & CNC Laser Cutter",
+      leadTime: "18 Hours",
+      output: "Bundled Cut Garment Panels & Shade Lot Stickers",
+    },
+    {
+      num: "03",
+      title: "Sewing Line Assembly",
+      desc: "Modular line assembly with real-time barcode bundle tracking across collar, sleeve, placket, and main body stations.",
+      equipment: "Juki Automatic Sewing Machines & Overlock Station",
+      leadTime: "36 Hours",
+      output: "Assembled Unwashed Garment Shells",
+    },
+    {
+      num: "04",
+      title: "Ozone Bio Wash & Garment Dyeing",
+      desc: "Sustainable waterless ozone bio wash, vintage stone wash, laser distressing, and color fixation.",
+      equipment: "Tonello Industrial Ozone Chamber & Laser Engraver",
+      leadTime: "24 Hours",
+      output: "Washed Finished Garments with Soft Texture",
+    },
+    {
+      num: "05",
+      title: "AQL 2.5 Audit & Goods Dispatch",
+      desc: "Final AQL 2.5 quality control audit, steam pressing, price tagging, carton packing, and global shipping dispatch.",
+      equipment: "Steam Tunnel Press, Tagging Tacker & Barcode Scanner",
+      leadTime: "12 Hours",
+      output: "Packed Master Cartons & Dispatch Manifest",
+    },
+  ];
+
   return (
     <PublicLayout>
       <div className="bg-[#FAF8F5] min-h-screen py-10 px-4 md:px-12 max-w-7xl mx-auto">
         
-        {/* HERO SECTION — Matching Reference Image Layout */}
+        {/* HERO SECTION */}
         <section className="pt-6 pb-12">
           
           {/* Top Headline Grid */}
@@ -47,7 +107,7 @@ function LandingPage() {
 
             <div className="lg:col-span-4 pb-2">
               <p className="text-neutral-600 text-sm md:text-base leading-relaxed font-medium max-w-md">
-                Custom fabrics, expert support, and 13-stage real-time tracking — built for fashion brands, designers, and industrial garment enterprises.
+                Custom fabrics, expert support, and 13 stage real-time tracking built for fashion brands, designers, and industrial garment enterprises.
               </p>
             </div>
           </div>
@@ -79,7 +139,7 @@ function LandingPage() {
                 </div>
 
                 <blockquote className="text-neutral-700 text-sm italic font-medium leading-relaxed">
-                  &ldquo;We deliver fully customized garment conversion at low MOQ with full 13-stage visibility to fashion businesses globally.&rdquo;
+                  &ldquo;We deliver fully customized garment conversion at low MOQ with full 13 stage visibility to fashion businesses globally.&rdquo;
                 </blockquote>
               </div>
 
@@ -129,11 +189,11 @@ function LandingPage() {
             <div className="space-y-1">
               <div className="text-3xl md:text-4xl font-display font-black text-white">2,450+</div>
               <div className="text-xs font-bold uppercase tracking-wider text-amber-500">Active Machines</div>
-              <p className="text-[11px] text-neutral-400">Automated sewing, cutting &amp; ozone wash</p>
+              <p className="text-[11px] text-neutral-400">Automated sewing, cutting, and ozone wash</p>
             </div>
             
             <div className="space-y-1 border-l border-neutral-800 pl-4 md:pl-8">
-              <div className="text-3xl md:text-4xl font-display font-black text-white">13-Stage</div>
+              <div className="text-3xl md:text-4xl font-display font-black text-white">13 Stage</div>
               <div className="text-xs font-bold uppercase tracking-wider text-amber-500">Live Pipeline</div>
               <p className="text-[11px] text-neutral-400">Real-time WIP stage tracking</p>
             </div>
@@ -152,7 +212,7 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* 5-STAGE PROCESS CARDS */}
+        {/* 5-STAGE INTERACTIVE PROCESS CARDS */}
         <section className="py-12">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
             <div>
@@ -171,62 +231,27 @@ function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-            
-            {/* Stage 1 */}
-            <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
-                01
+            {stageDetails.map((stage) => (
+              <div
+                key={stage.num}
+                onClick={() => setSelectedStageModal(stage)}
+                className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-amber-600 transition-all space-y-4 cursor-pointer group"
+              >
+                <div className="flex justify-between items-center">
+                  <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
+                    {stage.num}
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
+                </div>
+                <h3 className="font-bold text-base text-neutral-950 group-hover:text-amber-700 transition-colors">{stage.title}</h3>
+                <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3">
+                  {stage.desc}
+                </p>
+                <div className="pt-2 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                  Click to inspect specs ↗
+                </div>
               </div>
-              <h3 className="font-bold text-base text-neutral-950">Material Intake</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Customer-supplied fabric rolls and trims logged, inspected, and shade-matched.
-              </p>
-            </div>
-
-            {/* Stage 2 */}
-            <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
-                02
-              </div>
-              <h3 className="font-bold text-base text-neutral-950">Precision Cutting</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Automated Gerber spreading and laser cutting for optimal marker efficiency.
-              </p>
-            </div>
-
-            {/* Stage 3 */}
-            <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
-                03
-              </div>
-              <h3 className="font-bold text-base text-neutral-950">Sewing Assembly</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Modular line assembly with real-time barcode bundle tracking.
-              </p>
-            </div>
-
-            {/* Stage 4 */}
-            <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
-                04
-              </div>
-              <h3 className="font-bold text-base text-neutral-950">Ozone &amp; Wash</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Sustainable ozone bio-wash, garment dyeing, and laser distressing.
-              </p>
-            </div>
-
-            {/* Stage 5 */}
-            <div className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all space-y-4">
-              <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm">
-                05
-              </div>
-              <h3 className="font-bold text-base text-neutral-950">AQL &amp; Dispatch</h3>
-              <p className="text-xs text-neutral-600 leading-relaxed">
-                Final AQL 2.5 quality audit, carton packing, and global shipping.
-              </p>
-            </div>
-
+            ))}
           </div>
         </section>
 
@@ -237,7 +262,7 @@ function LandingPage() {
               Ready to Track Your Garment Production?
             </h2>
             <p className="text-white/90 text-sm md:text-base font-medium">
-              Access live 13-stage order tracking, material inspection logs, and dispatch manifests in real-time.
+              Access live 13 stage order tracking, material inspection logs, and dispatch manifests in real-time.
             </p>
             <div className="pt-4 flex flex-col sm:flex-row justify-center gap-4">
               <Link
@@ -246,17 +271,64 @@ function LandingPage() {
               >
                 Access Client Portal
               </Link>
-              <Link
-                to="/contact"
-                className="bg-white text-neutral-950 hover:bg-neutral-950 hover:text-white px-8 py-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-lg"
+              <button
+                onClick={() => navigate({ to: "/process" })}
+                className="bg-white text-neutral-950 hover:bg-neutral-950 hover:text-white px-8 py-4 rounded-full text-xs font-bold uppercase tracking-wider transition-all shadow-lg cursor-pointer"
               >
-                Schedule Factory Tour
-              </Link>
+                Explore 13 Stage Specs
+              </button>
             </div>
           </div>
         </section>
 
       </div>
+
+      {/* INTERACTIVE STAGE DETAILS MODAL */}
+      {selectedStageModal && (
+        <div className="fixed inset-0 bg-neutral-950/70 backdrop-blur-sm z-50 grid place-items-center p-4">
+          <div className="bg-white text-neutral-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-neutral-200 space-y-6">
+            <div className="flex justify-between items-center border-b border-neutral-100 pb-4">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-amber-600 text-white font-bold text-xs grid place-items-center">
+                  {selectedStageModal.num}
+                </span>
+                <h3 className="font-bold text-lg text-neutral-950">{selectedStageModal.title}</h3>
+              </div>
+              <button onClick={() => setSelectedStageModal(null)} className="text-neutral-400 hover:text-black">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <p className="text-xs text-neutral-700 leading-relaxed font-medium">
+              {selectedStageModal.desc}
+            </p>
+
+            <div className="space-y-3 bg-neutral-50 p-4 rounded-2xl border border-neutral-200 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">Equipment Required:</span>
+                <span className="font-semibold text-neutral-950">{selectedStageModal.equipment}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">Standard Lead Time:</span>
+                <span className="font-semibold text-amber-700">{selectedStageModal.leadTime}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-neutral-500 uppercase tracking-wider text-[10px]">Stage Output:</span>
+                <span className="font-semibold text-neutral-950">{selectedStageModal.output}</span>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button 
+                onClick={() => { setSelectedStageModal(null); navigate({ to: "/process" }); }}
+                className="w-full bg-neutral-950 text-white hover:bg-amber-600 py-3 rounded-full text-xs font-bold uppercase tracking-wider transition-colors"
+              >
+                View Complete 13 Stage Manual
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PublicLayout>
   );
 }
