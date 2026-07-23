@@ -240,9 +240,9 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="px-5 py-5 border-b border-sidebar-border">
               <div className="flex items-center gap-2">
                 <img 
-                  src="/SVG_LOGO.svg" 
+                  src="/SVG_MARK.svg" 
                   alt="Logo" 
-                  className="h-9 w-9 rounded-md object-contain" 
+                  className="h-9 w-auto object-contain" 
                 />
                 <div className="leading-tight">
                   <div className="font-display font-bold text-sm tracking-wide text-sidebar-foreground">FORGE &amp; FABRIC</div>
@@ -291,9 +291,9 @@ export function AppShell({ children }: { children: ReactNode }) {
         {collapsed ? (
           <div className="py-4 px-2 border-b border-sidebar-border flex flex-col items-center gap-2.5">
             <img 
-              src="/SVG_LOGO.svg" 
+              src="/SVG_MARK.svg" 
               alt="Logo" 
-              className="h-8 w-8 rounded-lg object-contain shrink-0" 
+              className="h-8 w-auto object-contain shrink-0" 
             />
             <button 
               onClick={toggleCollapsed}
@@ -307,9 +307,9 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="px-4 py-4 border-b border-sidebar-border flex items-center justify-between">
             <div className="flex items-center gap-3 overflow-hidden">
               <img 
-                src="/SVG_LOGO.svg" 
+                src="/SVG_MARK.svg" 
                 alt="Forge & Fabric Logo" 
-                className="h-10 w-10 md:h-11 md:w-11 rounded-xl object-contain p-0.5 bg-white shadow-sm border border-white/20 shrink-0" 
+                className="h-10 w-auto md:h-11 object-contain p-0.5 bg-white shadow-sm border border-white/20 shrink-0 rounded-lg" 
               />
               <div className="leading-tight transition-all duration-300">
                 <div className="font-display font-bold text-lg md:text-xl tracking-tight text-white">FORGE &amp; FABRIC</div>

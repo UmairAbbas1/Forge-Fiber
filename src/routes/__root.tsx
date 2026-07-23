@@ -96,9 +96,9 @@ function GlobalLoadingScreen({ error }: { error?: string | null }) {
       {/* Brand mark */}
       <div className="flex items-center gap-3">
         <img 
-          src="/SVG_LOGO.svg" 
+          src="/SVG_MARK.svg" 
           alt="Logo" 
-          className="h-20 w-20 rounded-lg object-contain select-none" 
+          className="h-20 w-auto object-contain select-none" 
         />
         <span className="font-display font-bold text-3xl tracking-wider text-primary">
           Forge &amp; Fabric
