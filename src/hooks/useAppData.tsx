@@ -266,7 +266,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -278,7 +278,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -290,7 +290,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -302,7 +302,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -314,7 +314,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -326,7 +326,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -338,7 +338,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -350,7 +350,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -362,7 +362,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -380,8 +380,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 0,   // Always fetch fresh — notifications must be real-time
-    refetchInterval: 10_000, // Poll every 10s as a safety net
+    staleTime: 5_000,
+    refetchInterval: 15_000,
     retry: 1,
   });
 
@@ -403,12 +403,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Always use DB notifications in Supabase mode (even if empty — customer may genuinely have none yet)
   const notifications = isRealSupabase ? dbNotifications : localNotifications;
 
-  // Strict Customer Scoping Security Logic with In-Memory Caching
+  // Strict Customer Scoping Security Logic
   const scopedOrders = useMemo(() => {
-    const cacheKey = `scoped_orders:${user?.id || "guest"}:${orders.length}`;
-    const cached = appCache.get<Order[]>(cacheKey);
-    if (cached) return cached;
-
     let result = orders;
     if (user?.role === "customer") {
       const custName = user.customer_name?.trim().toLowerCase();
@@ -461,7 +457,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    appCache.set(cacheKey, result, 30_000, ["orders"]);
     return result;
   }, [user, orders, customers]);
 
