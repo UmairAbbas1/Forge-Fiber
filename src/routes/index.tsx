@@ -45,6 +45,18 @@ interface StageModalData {
 function LandingPage() {
   const navigate = useNavigate();
   const [selectedStageModal, setSelectedStageModal] = useState<StageModalData | null>(null);
+  const [tilt, setTilt] = useState({ x: 0, y: 0 });
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 10;
+    const y = ((e.clientY - rect.top) / rect.height - 0.5) * -10;
+    setTilt({ x, y });
+  };
+
+  const handleMouseLeave = () => {
+    setTilt({ x: 0, y: 0 });
+  };
 
   const stageDetails: StageModalData[] = [
     {
@@ -119,7 +131,15 @@ function LandingPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-stretch">
             
             {/* Left Card: Testimonial & Big Stat */}
-            <div className="lg:col-span-4 flex flex-col justify-between bg-white/70 backdrop-blur border border-neutral-200/80 p-8 rounded-3xl shadow-sm">
+            <div 
+              onMouseMove={handleMouseMove}
+              onMouseLeave={handleMouseLeave}
+              style={{
+                transform: `perspective(1000px) rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`,
+                transition: "transform 0.15s ease-out",
+              }}
+              className="lg:col-span-4 flex flex-col justify-between bg-white/80 backdrop-blur border border-neutral-200/80 p-8 rounded-3xl shadow-sm hover:shadow-xl transition-shadow duration-300"
+            >
               <div className="space-y-6">
                 <div className="flex items-center gap-3">
                   <div className="relative">

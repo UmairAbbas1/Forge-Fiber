@@ -1,6 +1,6 @@
-import { createContext, useContext, useEffect, useRef, useState, useMemo, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, useMemo, useCallback, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, isRealSupabase } from "../lib/supabase";
+import { supabase, isRealSupabase, type Profile, getMockProfiles, saveMockProfiles } from "../lib/supabase";
 import { useAuth } from "./useAuth";
 import { appCache } from "../lib/cacheAndRateLimiter";
 import { eventQueue } from "../lib/eventQueue";
@@ -266,7 +266,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -278,7 +278,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -290,7 +290,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -302,7 +302,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -314,7 +314,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -326,7 +326,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -338,7 +338,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -350,7 +350,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -362,7 +362,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 60_000,
+    staleTime: 5_000,
     retry: 1,
   });
 
@@ -380,8 +380,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return data || [];
     },
     enabled: isRealSupabase && !!user,
-    staleTime: 0,   // Always fetch fresh — notifications must be real-time
-    refetchInterval: 10_000, // Poll every 10s as a safety net
+    staleTime: 5_000,
+    refetchInterval: 15_000,
     retry: 1,
   });
 
@@ -403,12 +403,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Always use DB notifications in Supabase mode (even if empty — customer may genuinely have none yet)
   const notifications = isRealSupabase ? dbNotifications : localNotifications;
 
-  // Strict Customer Scoping Security Logic with In-Memory Caching
+  // Strict Customer Scoping Security Logic
   const scopedOrders = useMemo(() => {
-    const cacheKey = `scoped_orders:${user?.id || "guest"}:${orders.length}`;
-    const cached = appCache.get<Order[]>(cacheKey);
-    if (cached) return cached;
-
     let result = orders;
     if (user?.role === "customer") {
       const custName = user.customer_name?.trim().toLowerCase();
@@ -461,7 +457,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       });
     }
 
-    appCache.set(cacheKey, result, 30_000, ["orders"]);
     return result;
   }, [user, orders, customers]);
 
@@ -818,7 +813,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       } else {
         // mock logic
         const profs = getMockProfiles();
-        const idx = profs.findIndex((p) => p.id === user.id);
+        const idx = profs.findIndex((p: Profile) => p.id === user.id);
         if (idx !== -1) {
           profs[idx] = { ...profs[idx], ...fields };
           saveMockProfiles(profs);
@@ -1846,55 +1841,71 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     isLoadingNotifications
   );
 
+  const contextValue = useMemo(() => ({
+    orders: scopedOrders,
+    materials: scopedMaterials,
+    cutting: scopedCutting,
+    sewing: scopedSewing,
+    wash: scopedWash,
+    qc: scopedQc,
+    cartons: scopedCartons,
+    wipLogs: scopedWipLogs,
+    customers,
+    equipment,
+    checkpoints,
+    notifications: scopedNotifications,
+    addOrder,
+    updateOrder,
+    deleteOrder,
+    deleteCustomerCascade,
+    addMaterial,
+    updateMaterialInspection,
+    addCuttingRecord,
+    updateCuttingRecord,
+    addSewingBundle,
+    updateSewingBundle,
+    addWashBatch,
+    updateWashBatch,
+    addQCRecord,
+    addCarton,
+    updateCartonDispatch,
+    addWIPLog,
+    importExcelTrackerPackage,
+    exportExcelTrackerPackage,
+    addCustomer,
+    updateCustomer,
+    updateProfileSettings: async (f: any) => updateProfileSettingsMutation.mutateAsync(f),
+    addEquipment,
+    toggleEquipmentStatus,
+    updateCheckpoint,
+    markNotificationAsRead,
+    advanceOrderStage,
+    isOrderOnHold,
+    isLoading,
+    toast,
+    setToast,
+    globalSearchQuery,
+    setGlobalSearchQuery,
+  }), [
+    scopedOrders,
+    scopedMaterials,
+    scopedCutting,
+    scopedSewing,
+    scopedWash,
+    scopedQc,
+    scopedCartons,
+    scopedWipLogs,
+    customers,
+    equipment,
+    checkpoints,
+    scopedNotifications,
+    isLoading,
+    toast,
+    globalSearchQuery,
+  ]);
+
   return (
-    <AppDataContext.Provider
-      value={{
-        orders: scopedOrders,
-        materials: scopedMaterials,
-        cutting: scopedCutting,
-        sewing: scopedSewing,
-        wash: scopedWash,
-        qc: scopedQc,
-        cartons: scopedCartons,
-        wipLogs: scopedWipLogs,
-        customers,
-        equipment,
-        checkpoints,
-        notifications: scopedNotifications,
-        addOrder,
-        updateOrder,
-        deleteOrder,
-        deleteCustomerCascade,
-        addMaterial,
-        updateMaterialInspection,
-        addCuttingRecord,
-        updateCuttingRecord,
-        addSewingBundle,
-        updateSewingBundle,
-        addWashBatch,
-        updateWashBatch,
-        addQCRecord,
-        addCarton,
-        updateCartonDispatch,
-        addWIPLog,
-        importExcelTrackerPackage,
-        exportExcelTrackerPackage,
-        addCustomer,
-        updateCustomer,
-        updateProfileSettings: async (f) => updateProfileSettingsMutation.mutateAsync(f),
-        addEquipment,
-        toggleEquipmentStatus,
-        updateCheckpoint,
-        markNotificationAsRead,
-        advanceOrderStage,
-        isOrderOnHold,
-        isLoading,
-        toast,
-        setToast,
-        globalSearchQuery,
-        setGlobalSearchQuery,
-      }}
-    >
+    <AppDataContext.Provider value={contextValue}>
       {children}
     </AppDataContext.Provider>
   );
