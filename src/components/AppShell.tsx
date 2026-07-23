@@ -239,13 +239,13 @@ export function AppShell({ children }: { children: ReactNode }) {
           <div className="flex flex-col h-full">
             <div className="px-5 py-5 border-b border-sidebar-border/60">
               <div className="flex items-center gap-3">
-                <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 glow-cyan">
-                  <img src="/SVG_MARK.svg" alt="Logo" className="h-6 w-auto object-contain" />
+                <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-md">
+                  <img src="/SVG_MARK.svg" alt="Logo" className="w-full h-full object-contain" />
                 </div>
                 <div className="leading-tight">
-                  <div className="font-display font-bold text-sm tracking-wide text-gradient-cyan">FORGE &amp; FABRIC</div>
-                  <div className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/50">
-                    Built to craft
+                  <div className="font-display font-black text-base tracking-tight text-white">FORGE &amp; FABRIC</div>
+                  <div className="text-[9px] uppercase tracking-widest text-amber-500 font-bold">
+                    Garment Conversion
                   </div>
                 </div>
               </div>
@@ -288,12 +288,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       >
         {collapsed ? (
           <div className="py-4 px-2 border-b border-sidebar-border/60 flex flex-col items-center gap-2.5">
-            <div className="h-9 w-9 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center glow-cyan">
-              <img src="/SVG_MARK.svg" alt="Logo" className="h-6 w-auto object-contain" />
+            <div className="h-10 w-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-md">
+              <img src="/SVG_MARK.svg" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <button 
               onClick={toggleCollapsed}
-              className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-primary/10 hover:text-primary hover:border hover:border-primary/30 transition-all focus:outline-none"
+              className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-white/10 hover:text-white transition-all focus:outline-none"
               title="Expand Sidebar"
             >
               <ChevronRight className="h-4 w-4" />
@@ -302,19 +302,19 @@ export function AppShell({ children }: { children: ReactNode }) {
         ) : (
           <div className="px-4 py-4 border-b border-sidebar-border/60 flex items-center justify-between">
             <div className="flex items-center gap-3 overflow-hidden">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center shrink-0 glow-cyan">
-                <img src="/SVG_MARK.svg" alt="Forge & Fabric Logo" className="h-7 w-auto object-contain" />
+              <div className="h-11 w-11 rounded-xl bg-white flex items-center justify-center shrink-0 p-1.5 shadow-md border border-neutral-200/20">
+                <img src="/SVG_MARK.svg" alt="Forge & Fabric Logo" className="w-full h-full object-contain" />
               </div>
               <div className="leading-tight transition-all duration-300">
-                <div className="font-display font-bold text-base tracking-tight text-gradient-cyan">FORGE &amp; FABRIC</div>
-                <div className="text-[10px] uppercase tracking-[0.16em] text-sidebar-foreground/50 font-semibold">
-                  Built to craft
+                <div className="font-display font-black text-lg md:text-xl tracking-tight text-white">FORGE &amp; FABRIC</div>
+                <div className="text-[10px] uppercase tracking-[0.18em] text-amber-500 font-bold">
+                  Garment Conversion
                 </div>
               </div>
             </div>
             <button 
               onClick={toggleCollapsed}
-              className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-primary/10 hover:text-primary transition-all focus:outline-none"
+              className="p-1.5 rounded-lg bg-sidebar-accent hover:bg-white/10 hover:text-white transition-all focus:outline-none"
               title="Collapse Sidebar"
             >
               <ChevronLeft className="h-4 w-4" />
