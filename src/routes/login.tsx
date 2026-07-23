@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { KeyRound, Mail, ArrowRight, UserCheck, AlertTriangle, ArrowLeft } from "lucide-react";
+import { rateLimiter } from "../lib/cacheAndRateLimiter";
 
 export const Route = createFileRoute("/login")({
   head: () => ({
@@ -43,6 +44,12 @@ function LoginPage() {
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setErrorMsg("Please enter a valid email address (e.g. name@company.com).");
+      return;
+    }
+
+    const rateCheck = rateLimiter.isAllowed(`login:${email.trim().toLowerCase()}`, 5, 10000);
+    if (!rateCheck.allowed) {
+      setErrorMsg(`Too many login attempts. Please wait ${rateCheck.retryAfterSec} seconds before retrying.`);
       return;
     }
 

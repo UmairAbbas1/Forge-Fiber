@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../hooks/useAuth";
 import { useAppData } from "../hooks/useAppData";
 import { KeyRound, Mail, ArrowRight, UserPlus, AlertTriangle, ArrowLeft } from "lucide-react";
+import { rateLimiter } from "../lib/cacheAndRateLimiter";
 
 export const Route = createFileRoute("/signup")({
   head: () => ({
@@ -55,6 +56,12 @@ function SignupPage() {
     }
     if (role === "customer" && !customerName.trim()) {
       setErrorMsg("Please enter your company name.");
+      return;
+    }
+
+    const rateCheck = rateLimiter.isAllowed(`signup:${email.trim().toLowerCase()}`, 3, 15000);
+    if (!rateCheck.allowed) {
+      setErrorMsg(`Too many registration attempts. Please wait ${rateCheck.retryAfterSec} seconds before retrying.`);
       return;
     }
 

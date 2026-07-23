@@ -2,6 +2,8 @@ import { createContext, useContext, useEffect, useRef, useState, useMemo, type R
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, isRealSupabase } from "../lib/supabase";
 import { useAuth } from "./useAuth";
+import { appCache } from "../lib/cacheAndRateLimiter";
+import { eventQueue } from "../lib/eventQueue";
 import {
   ORDERS as seedOrders,
   MATERIALS as seedMaterials,
@@ -401,8 +403,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Always use DB notifications in Supabase mode (even if empty — customer may genuinely have none yet)
   const notifications = isRealSupabase ? dbNotifications : localNotifications;
 
-  // Strict Customer Scoping Security Logic
+  // Strict Customer Scoping Security Logic with In-Memory Caching
   const scopedOrders = useMemo(() => {
+    const cacheKey = `scoped_orders:${user?.id || "guest"}:${orders.length}`;
+    const cached = appCache.get<Order[]>(cacheKey);
+    if (cached) return cached;
+
+    let result = orders;
     if (user?.role === "customer") {
       const custName = user.customer_name?.trim().toLowerCase();
       const custId = (user as any).customer_id;
@@ -440,7 +447,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         userCompanyNames.add(customers[0].name.trim().toLowerCase());
       }
 
-      return orders.filter((o) => {
+      result = orders.filter((o) => {
         // 1. Direct customer_id match
         if (custId && o.customer_id && o.customer_id === custId) {
           return true;
@@ -453,7 +460,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         return false;
       });
     }
-    return orders;
+
+    appCache.set(cacheKey, result, 30_000, ["orders"]);
+    return result;
   }, [user, orders, customers]);
 
   const scopedOrderIds = useMemo(() => {
@@ -1119,6 +1128,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Order Mutations
   const addOrder = (order: Omit<Order, "created_date">) => {
+    appCache.invalidateTag("orders");
     const newOrder: Order = {
       ...order,
       created_date: new Date().toISOString().slice(0, 10),
@@ -1133,6 +1143,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   };
 
   const updateOrder = (orderId: string, fields: Partial<Order>) => {
+    appCache.invalidateTag("orders");
     if (isRealSupabase) {
       updateOrderMutation.mutate({ id: orderId, fields });
     } else {
