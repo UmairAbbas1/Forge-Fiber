@@ -72,20 +72,23 @@ function Page() {
     });
   }, [globalSearchQuery, status, orders]);
 
-  const open = orders.filter((o) => o.status === "Open").length;
-  const inProd = orders.filter((o) => o.status === "In Production").length;
-  const onHold = orders.filter((o) => o.status === "On Hold").length;
-  const shipped = orders.filter((o) => o.status === "Shipped").length;
-
-  const totalStages = orders.reduce((sum, o) => sum + o.current_stage, 0);
-  const overallProgress = orders.length > 0 
-    ? Math.round((totalStages / (orders.length * 13)) * 100) 
-    : 0;
-
-  const donutData = [
-    { name: "Complete", value: overallProgress },
-    { name: "Remaining", value: 100 - overallProgress },
-  ];
+  const { open, inProd, onHold, shipped, overallProgress, donutData } = useMemo(() => {
+    let open = 0, inProd = 0, onHold = 0, shipped = 0, totalStages = 0;
+    for (let i = 0; i < orders.length; i++) {
+      const s = orders[i].status;
+      if (s === "Open") open++;
+      else if (s === "In Production") inProd++;
+      else if (s === "On Hold") onHold++;
+      else if (s === "Shipped") shipped++;
+      totalStages += orders[i].current_stage || 0;
+    }
+    const overallProgress = orders.length > 0 ? Math.round((totalStages / (orders.length * 13)) * 100) : 0;
+    const donutData = [
+      { name: "Complete", value: overallProgress },
+      { name: "Remaining", value: 100 - overallProgress },
+    ];
+    return { open, inProd, onHold, shipped, overallProgress, donutData };
+  }, [orders]);
 
   // Dynamic 14-Day Order Trend calculation based on actual scoped database orders
   const orderTrendData = useMemo(() => {
