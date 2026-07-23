@@ -260,13 +260,13 @@ export function AppShell({ children }: { children: ReactNode }) {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileOpen(false)}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-all duration-200 ${
+                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                       active
-                        ? "bg-primary/10 text-primary border-l-2 border-primary font-semibold glow-cyan"
-                        : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        ? "bg-white/10 text-white border-l-4 border-amber-500 font-bold shadow-sm"
+                        : "text-neutral-300 hover:bg-white/5 hover:text-white"
                     }`}
                   >
-                    <Icon className="h-4.5 w-4.5" />
+                    <Icon className={`h-4.5 w-4.5 shrink-0 ${active ? "text-amber-400" : "text-neutral-400"}`} />
                     <span>{item.label}</span>
                   </Link>
                 );
@@ -337,12 +337,12 @@ export function AppShell({ children }: { children: ReactNode }) {
                   } ${
                     active
                       ? collapsed
-                        ? "bg-primary/15 text-primary border border-primary/30 shadow-sm glow-cyan"
-                        : "bg-primary/10 text-primary border-l-2 border-primary font-semibold"
-                      : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                        ? "bg-amber-500/20 text-white border border-amber-500/40 shadow-sm"
+                        : "bg-white/10 text-white border-l-4 border-amber-500 font-bold shadow-sm"
+                      : "text-neutral-300 hover:bg-white/5 hover:text-white"
                   }`}
                 >
-                  <Icon className="h-4.5 w-4.5 shrink-0" />
+                  <Icon className={`h-4.5 w-4.5 shrink-0 ${active ? "text-amber-400" : "text-neutral-400"}`} />
                   {!collapsed && <span>{item.label}</span>}
                 </Link>
               );
@@ -353,7 +353,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                     <TooltipTrigger asChild>
                       {linkEl}
                     </TooltipTrigger>
-                    <TooltipContent side="right" className="bg-primary text-primary-foreground text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-lg border border-primary/30">
+                    <TooltipContent side="right" className="bg-neutral-900 text-white text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow-lg border border-neutral-700">
                       {item.label}
                     </TooltipContent>
                   </Tooltip>
