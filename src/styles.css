@@ -154,13 +154,13 @@
   --destructive:             #C62828;
   --destructive-foreground:  #ffffff;
   --success:                 #1B6B3A;
-  --success-foreground:      #ffffff;
+  --success-foreground:      #0D3D20;
   --warning:                 #B45309;
-  --warning-foreground:      #ffffff;
+  --warning-foreground:      #7C3000;
 
   /* ── Legacy aliases ── */
   --gold:             #B45309;
-  --gold-foreground:  #ffffff;
+  --gold-foreground:  #7C3000;
   --navy:             #1B2A4A;
   --navy-foreground:  #ffffff;
   --error:            #C62828;

@@ -186,7 +186,7 @@ function Page() {
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-md bg-gold/10 border border-gold/30 p-4 text-center">
                 <div className="text-xs uppercase text-muted-foreground">Ready in Cartons</div>
-                <div className="mt-1 text-3xl font-display font-bold text-warning-foreground">{dispatchReady}</div>
+                <div className="mt-1 text-3xl font-display font-bold text-warning">{dispatchReady}</div>
               </div>
               <div className="rounded-md bg-success/10 border border-success/30 p-4 text-center">
                 <div className="text-xs uppercase text-muted-foreground">Dispatched Out</div>
