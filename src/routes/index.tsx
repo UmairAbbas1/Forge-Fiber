@@ -227,20 +227,23 @@ function LandingPage() {
           </div>
         </section>
 
-        {/* 5-STAGE INTERACTIVE PROCESS CARDS */}
+        {/* 5-PHASE INTERACTIVE PROCESS CARDS */}
         <section className="py-12">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-amber-700">Industrial Process</span>
               <h2 className="text-3xl md:text-4xl font-display font-black text-neutral-950 mt-1">
-                Conversion Manufacturing
+                5 Core Conversion Phases
               </h2>
+              <p className="text-sm text-neutral-600 mt-3 max-w-xl font-medium">
+                Our comprehensive 13-stage production pipeline is organized into 5 core phases. Click any phase to inspect the equipment, lead times, and outputs.
+              </p>
             </div>
             <Link
               to="/process"
               className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-neutral-900 hover:text-amber-700 transition-colors"
             >
-              <span>View Full Process Specifications</span>
+              <span>View Full 13-Stage Specifications</span>
               <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
@@ -250,19 +253,19 @@ function LandingPage() {
               <div
                 key={stage.num}
                 onClick={() => setSelectedStageModal(stage)}
-                className="bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-amber-600 transition-all space-y-4 cursor-pointer group"
+                className="flex flex-col h-full bg-white border border-neutral-200/90 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-amber-600 transition-all cursor-pointer group"
               >
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center mb-4">
                   <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center font-bold text-sm group-hover:bg-amber-600 group-hover:text-white transition-colors">
                     {stage.num}
                   </div>
                   <ChevronRight className="w-4 h-4 text-neutral-400 group-hover:translate-x-1 transition-transform" />
                 </div>
-                <h3 className="font-bold text-base text-neutral-950 group-hover:text-amber-700 transition-colors">{stage.title}</h3>
-                <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3">
+                <h3 className="font-bold text-base text-neutral-950 group-hover:text-amber-700 transition-colors mb-3">{stage.title}</h3>
+                <p className="text-xs text-neutral-600 leading-relaxed line-clamp-3 mb-6 flex-grow">
                   {stage.desc}
                 </p>
-                <div className="pt-2 text-[10px] font-bold text-amber-800 uppercase tracking-wider">
+                <div className="pt-3 border-t border-neutral-100 text-[10px] font-bold text-amber-800 uppercase tracking-wider mt-auto group-hover:text-amber-600 transition-colors">
                   Click to inspect specs ↗
                 </div>
               </div>
